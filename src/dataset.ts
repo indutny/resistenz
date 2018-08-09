@@ -8,12 +8,18 @@ const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const LABELS = path.join(DATASET_DIR, 'labels.json');
 const IMAGE_DIR = path.join(DATASET_DIR, 'resized');
 
-export type Polygon = ReadonlyArray<number>;
+export interface IPoint { readonly x: number, readonly y: number };
+export type Polygon = ReadonlyArray<IPoint>;
 
 export interface IDatasetEntry {
   readonly rgb: Buffer;
-  readonly polygons: ReadonlyArray<Polygon>;
+  readonly grid: ReadonlyArray<Polygon | undefined>;
 }
+
+export const TARGET_WIDTH = 416;
+export const TARGET_HEIGHT = 416;
+export const GRID_SIZE = 13;
+export const GRID_DEPTH = 5;
 
 export async function load(): Promise<ReadonlyArray<IDatasetEntry>> {
   const json = await util.promisify(fs.readFile)(LABELS);
@@ -32,9 +38,9 @@ export async function load(): Promise<ReadonlyArray<IDatasetEntry>> {
     }
 
     polygons.set(entry['External ID'], geometry.map((geo: any) => {
-      const res: number[] = [];
+      const res: IPoint[] = [];
       for (const point of geo.geometry) {
-        res.push(point.x, point.y);
+        res.push({ x: point.x, y: point.y });
       }
       return res;
     }));
@@ -53,25 +59,66 @@ export async function load(): Promise<ReadonlyArray<IDatasetEntry>> {
     const height = image.bitmap.height;
     const imagePolys: ReadonlyArray<Polygon> = polygons.get(files[index])!
       .map((geo) => {
-        const res: number[] = [];
-        for (let i = 0; i < geo.length; i += 2) {
-          res.push(geo[i] * 416 / width);
-          res.push(geo[i + 1] * 416 / height);
-        }
-        return res;
+        return geo.map((p) => {
+          return {
+            x: p.x / width,
+            y: p.y / height,
+          };
+        });
       });
 
-    image.resize(416, 416);
+    const centers: ReadonlyArray<IPoint> = imagePolys.map((poly) => {
+      let x: number = 0;
+      let y: number = 0;
 
-    const rgb = Buffer.alloc(416 * 416 * 3);
+      for (const point of poly) {
+        x += point.x;
+        y += point.y;
+      }
+      x /= poly.length;
+      y /= poly.length;
+
+      return { x, y };
+    });
+
+    const grid: Array<Polygon | undefined> =
+        new Array(GRID_SIZE * GRID_SIZE * GRID_DEPTH);
+
+    for (const [ i, poly ] of imagePolys.entries()) {
+      const center = centers[i];
+
+      const gridX = Math.round(center.x * (GRID_SIZE - 1));
+      const gridY = Math.round(center.y * (GRID_SIZE - 1));
+
+      let gridIndex = GRID_DEPTH * (gridX * GRID_SIZE + gridY);
+      let hasSpace = false;
+      for (let i = 0; i < GRID_DEPTH; i++, gridIndex++) {
+        if (grid[gridIndex] === undefined) {
+          hasSpace = true;
+          break;
+        }
+      }
+
+      if (!hasSpace) {
+        continue;
+      }
+
+      grid[gridIndex] = poly;
+    }
+
+    image.resize(TARGET_WIDTH, TARGET_HEIGHT);
+
+    const rgb = Buffer.alloc(TARGET_WIDTH * TARGET_HEIGHT * 3);
     for (let i = 0, j = 0; i < image.bitmap.data.length; i += 4, j += 3) {
       rgb[j] = image.bitmap.data[i];
       rgb[j + 1] = image.bitmap.data[i + 1];
       rgb[j + 2] = image.bitmap.data[i + 2];
     }
 
-    entries.push({ rgb, polygons: imagePolys });
+    entries.push({ rgb, grid });
   }
 
   return entries;
 }
+
+load();

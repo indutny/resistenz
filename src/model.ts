@@ -1,6 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-node';
 
+import { TARGET_WIDTH, TARGET_HEIGHT, GRID_DEPTH };
+
 class Model {
   public readonly model: tf.Sequential;
 
@@ -9,7 +11,7 @@ class Model {
 
     // Initial layers
     model.add(tf.layers.conv2d({
-      inputShape: [ 416, 416, 3 ],
+      inputShape: [ TARGET_WIDTH, TARGET_HEIGHT, 3 ],
       kernelSize: 3,
       filters: 16,
       activation: 'relu',
@@ -55,7 +57,7 @@ class Model {
 
     model.add(tf.layers.conv2d({
       kernelSize: 1,
-      filters: 9 * 5,
+      filters: 9 * GRID_DEPTH,
       activation: 'relu'
     }));
 
