@@ -34,6 +34,16 @@ export function triangleArea(a: IVector, b: IVector): number {
   return Math.abs(a.x * b.y - a.y * b.x) / 2;
 }
 
+export function rotate(p: IPoint, angle: number): IPoint {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+
+  return {
+    x: cos * p.x - sin * p.y,
+    y: sin * p.x + cos * p.y,
+  };
+}
+
 export function polygonToRect(polygon: ReadonlyArray<IPoint>): IOrientedRect {
   assert.strictEqual(polygon.length, 4);
 
@@ -73,12 +83,11 @@ export function polygonToRect(polygon: ReadonlyArray<IPoint>): IOrientedRect {
     return b.norm - a.norm;
   }).map((entry) => entry.vec)[0];
 
-  const horizontal = { x: 1, y: 0 };
-
   // Compute angle without preference for particular orientation
-  const cos = Math.abs(dot(horizontal, longest) / norm(longest));
+  const cos = longest.x / norm(longest);
+  const sin = longest.y / norm(longest);
 
-  const angle = Math.acos(cos);
+  const angle = Math.atan(sin / (cos + 1e-23));
 
   return { cx, cy, width, height, angle };
 }
