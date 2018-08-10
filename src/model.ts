@@ -1,9 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-node';
 
-import { TARGET_WIDTH, TARGET_HEIGHT, GRID_DEPTH };
+import { TARGET_WIDTH, TARGET_HEIGHT, GRID_DEPTH } from './dataset';
 
-class Model {
+export class Model {
   public readonly model: tf.Sequential;
 
   constructor() {
@@ -41,7 +40,6 @@ class Model {
     convPool(3, 32, 2, 2);
     convPool(3, 64, 2, 2);
     convPool(3, 128, 2, 2);
-    convPool(3, 256, 2, 2);
 
     model.add(tf.layers.conv2d({
       kernelSize: 3,
@@ -66,5 +64,3 @@ class Model {
     this.model = model;
   }
 }
-
-const m = new Model();
