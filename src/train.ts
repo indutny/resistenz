@@ -34,15 +34,20 @@ async function train() {
       }
     }
 
-    return [
-      tf.tensor(xs, [
-        pairs.length, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ]),
-      tf.tensor(ys, [
-        pairs.length, GRID_SIZE, GRID_SIZE, GRID_CHANNELS ])
-    ];
+    const image = tf.tensor(xs, [
+        pairs.length, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ]);
+
+    return {
+      image,
+      targetGrid: tf.tidy(() => {
+        const shallow = tf.tensor(ys, [
+            pairs.length, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS ]);
+        return shallow.tile([ 1, 1, 1, GRID_DEPTH, 1 ]);
+      }),
+    };
   }
 
-  const [ valXs, valYs ] =
+  const validationData =
     tensorify(validateSrc.map((input) => input.toTrainingPair()));
 
   console.log('Running fit');
@@ -54,18 +59,19 @@ async function train() {
 
     console.log('Epoch %d', epoch);
     ts = Date.now();
-    const [ xs, ys ] = tensorify(train);
-    const history = await m.model.fit(xs, ys, {
-      initialEpoch: epoch,
-      epochs: 1,
-      validationData: [ valXs, valYs ],
-    });
+    const trainingData = tensorify(train);
+    const history = await m.model.fit(
+      trainingData.image,
+      trainingData.targetGrid,
+      {
+        initialEpoch: epoch,
+        epochs: epoch + 1,
+      });
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
     console.log(history);
 
     // Clean-up memory?
-    tf.dispose(xs);
-    tf.dispose(ys);
+    tf.dispose(trainingData);
   }
 }
 
