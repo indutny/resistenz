@@ -54,6 +54,8 @@ async function train() {
   for (let epoch = 1; epoch < 100; epoch++) {
     console.log('Randomizing training data...');
     let ts = Date.now();
+
+    // TODO(indutny): shuffle
     const train = trainSrc.map((input) => input.randomize().toTrainingPair());
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
 
