@@ -56,6 +56,7 @@ async function train() {
     ts = Date.now();
     const [ xs, ys ] = tensorify(train);
     const history = await m.model.fit(xs, ys, {
+      initialEpoch: epoch,
       epochs: 1,
       validationData: [ valXs, valYs ],
     });
