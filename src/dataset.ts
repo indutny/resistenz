@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as util from 'util';
 import jimp = require('jimp');
 
-import { IPoint, IOrientedRect, polygonToRect } from './utils';
+import { Polygon, IPoint, IOrientedRect } from './utils';
 import { Input } from './input';
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
@@ -15,8 +15,6 @@ export const TARGET_WIDTH = 416;
 export const TARGET_HEIGHT = 416;
 export const GRID_SIZE = 20;
 export const GRID_DIMS = 6;
-
-type Polygon = ReadonlyArray<IPoint>;
 
 export async function load(): Promise<ReadonlyArray<Input>> {
   const json = await util.promisify(fs.readFile)(LABELS);
@@ -50,21 +48,21 @@ export async function load(): Promise<ReadonlyArray<Input>> {
     const width = image.bitmap.width;
     const height = image.bitmap.height;
 
-    const rects = globalGeos.get(file)!.map((geo) => {
-      return polygonToRect(geo.map((point) => {
+    const geos = globalGeos.get(file)!.map((geo) => {
+      return geo.map((point) => {
         // The points have inverted y axis in the data :(
         return {
           x: point.x,
           y: height - point.y,
         };
-      }));
+      });
     });
 
-    return new Input(image, rects);
+    return new Input(image, geos);
   }));
 }
 
 load().then(async (inputs) => {
-  const svg = await inputs[7].toSVG();
+  const svg = await inputs[2].randomize().toSVG();
   fs.writeFileSync('/tmp/1.svg', svg);
 });

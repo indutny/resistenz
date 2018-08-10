@@ -1,8 +1,11 @@
 import jimp = require('jimp');
 import { Buffer } from 'buffer';
 
-import { IPoint, IOrientedRect, rotate } from './utils';
+import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
 import { TARGET_WIDTH, TARGET_HEIGHT } from './dataset';
+
+// Maximum angle of rotation
+const MAX_ROT_ANGLE = 360;
 
 // Max amount of crop from each side
 const MAX_CROP_PERCENT = 0.2;
@@ -15,15 +18,29 @@ const MAX_CONTRAST_DELTA = 0.5;
 
 export class Input {
   constructor(public readonly image: jimp,
-              public readonly rects: ReadonlyArray<IOrientedRect>) {
+              public readonly polys: ReadonlyArray<Polygon>) {
   }
 
   public randomize(): Input {
     const clone = this.image.clone();
-    let rects = this.rects.slice();
+    let polys = this.polys.slice();
 
     const width = clone.bitmap.width;
     const height = clone.bitmap.height;
+
+    const center = { x: width / 2, y: height / 2 };
+
+    // Randomly rotate
+    const angleDeg = Math.random() * MAX_ROT_ANGLE;
+    const angleRad = angleDeg * Math.PI / 180;
+    clone.background(0xffffffff);
+    clone.rotate(-angleDeg, false);
+    polys = polys.map((points) => {
+      return points.map((p) => {
+        const t = rotate({ x: p.x - center.x, y: p.y - center.y }, angleRad);
+        return { x: t.x + center.x, y: t.y + center.y };
+      });
+    });
 
     // Randomly crop
     const crop = {
@@ -39,25 +56,29 @@ export class Input {
     const cropH = height - cropY - Math.floor(crop.bottom * height);
 
     clone.crop(cropX, cropY, cropW, cropH);
-    rects = rects.filter((rect) => {
-      return rect.cx >= cropX && rect.cx <= cropX + cropW &&
-             rect.cy >= cropY && rect.cy <= cropY + cropH;
+    polys = polys.filter((points) => {
+      return points.every((p) => {
+        return p.x >= cropX && p.x <= cropX + cropW &&
+               p.y >= cropY && p.y <= cropY + cropH;
+      });
+    }).map((points) => {
+      return points.map((p) => {
+        return {
+          x: p.x - cropX,
+          y: p.y - cropY,
+        };
+      });
     });
 
     // Resize
-    const scaleX = TARGET_WIDTH / width;
-    const scaleY = TARGET_HEIGHT / height;
+    const scaleX = TARGET_WIDTH / cropW;
+    const scaleY = TARGET_HEIGHT / cropH;
     clone.resize(TARGET_WIDTH, TARGET_HEIGHT);
 
-    rects = rects.map((rect) => {
-      return {
-        cx: rect.cx * scaleX,
-        cy: rect.cy * scaleY,
-        // TODO(indutny): rotate and scale
-        width: rect.width,
-        height: rect.height,
-        angle: rect.angle,
-      };
+    polys = polys.map((points) => {
+      return points.map((p) => {
+        return { x: p.x * scaleX, y: p.y * scaleY };
+      });
     });
 
     // Random brightness/contrast adjustment
@@ -65,7 +86,7 @@ export class Input {
     clone.contrast((Math.random() - 0.5) * MAX_CONTRAST_DELTA);
 
     // Return new network input
-    return new Input(clone, rects);
+    return new Input(clone, polys);
   }
 
   public async toSVG(): Promise<string> {
@@ -78,7 +99,9 @@ export class Input {
     const width = this.image.bitmap.width;
     const height = this.image.bitmap.height;
 
-    const polygons = this.rects.map((rect) => {
+    const polygons = this.polys.map((poly) => {
+      return polygonToRect(poly);
+    }).map((rect) => {
       const halfWidth = rect.width / 2;
       const halfHeight = rect.height / 2;
 

@@ -5,6 +5,8 @@ export interface IPoint {
   readonly y: number;
 }
 
+export type Polygon = ReadonlyArray<IPoint>;
+
 export interface IVector {
   readonly x: number;
   readonly y: number;
@@ -44,7 +46,7 @@ export function rotate(p: IPoint, angle: number): IPoint {
   };
 }
 
-export function polygonToRect(polygon: ReadonlyArray<IPoint>): IOrientedRect {
+export function polygonToRect(polygon: Polygon): IOrientedRect {
   assert.strictEqual(polygon.length, 4);
 
   // Compute center
@@ -84,10 +86,7 @@ export function polygonToRect(polygon: ReadonlyArray<IPoint>): IOrientedRect {
   }).map((entry) => entry.vec)[0];
 
   // Compute angle without preference for particular orientation
-  const cos = longest.x / norm(longest);
-  const sin = longest.y / norm(longest);
-
-  const angle = Math.atan(sin / (cos + 1e-23));
+  const angle = Math.atan2(longest.y, longest.x);
 
   return { cx, cy, width, height, angle };
 }
