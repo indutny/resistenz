@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as util from 'util';
@@ -13,8 +14,6 @@ const IMAGE_DIR = path.join(DATASET_DIR, 'resized');
 
 export const TARGET_WIDTH = 416;
 export const TARGET_HEIGHT = 416;
-export const GRID_SIZE = 20;
-export const GRID_DIMS = 6;
 
 export async function load(): Promise<ReadonlyArray<Input>> {
   const json = await util.promisify(fs.readFile)(LABELS);
@@ -41,6 +40,16 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   const dir = await util.promisify(fs.readdir)(IMAGE_DIR);
   let files = dir.filter((file) => globalGeos.has(file));
 
+  // Stupid, but stable sort
+  files = files.map((file) => {
+    return {
+      file,
+      hash: crypto.createHash('sha256').update(file).digest('hex'),
+    };
+  }).sort((a, b) => {
+    return a.hash === b.hash ? 0 : a.hash < b.hash ? -1 : 1;
+  }).map((entry) => entry.file);
+
   console.log('Loading images...');
   return await Promise.all(files.map(async (file) => {
     const image = await jimp.read(path.join(IMAGE_DIR, file));
@@ -61,8 +70,3 @@ export async function load(): Promise<ReadonlyArray<Input>> {
     return new Input(image, geos);
   }));
 }
-
-load().then(async (inputs) => {
-  const svg = await inputs[2].randomize().toSVG();
-  fs.writeFileSync('/tmp/1.svg', svg);
-});

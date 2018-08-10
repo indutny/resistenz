@@ -4,6 +4,9 @@ import { Buffer } from 'buffer';
 import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
 import { TARGET_WIDTH, TARGET_HEIGHT } from './dataset';
 
+export const GRID_SIZE = 20;
+export const GRID_DIMS = 6;
+
 // Maximum angle of rotation
 const MAX_ROT_ANGLE = 360;
 
@@ -15,6 +18,11 @@ const MAX_BRIGHTNESS_DELTA = 0.5;
 
 // How much contrast can be adjusted [ 0, 1 ]
 const MAX_CONTRAST_DELTA = 0.5;
+
+export interface ITrainingPair {
+  readonly rgb: Float32Array;
+  readonly grid: Float32Array;
+}
 
 export class Input {
   constructor(public readonly image: jimp,
@@ -29,6 +37,8 @@ export class Input {
     const height = clone.bitmap.height;
 
     const center = { x: width / 2, y: height / 2 };
+
+    // TODO(indutny): add noise?
 
     // Randomly rotate
     const angleDeg = Math.random() * MAX_ROT_ANGLE;
@@ -89,19 +99,70 @@ export class Input {
     return new Input(clone, polys);
   }
 
+  public computeRects(): ReadonlyArray<IOrientedRect> {
+    return this.polys.map((poly) => {
+      return polygonToRect(poly);
+    });
+  }
+
+  public toTrainingPair(): ITrainingPair {
+    const bitmap = this.image.bitmap;
+    const rgb = new Float32Array(bitmap.width * bitmap.height * 3);
+    for (let i = 0, j = 0; i < bitmap.data.length; i += 4, j += 3) {
+      rgb[j + 0] = bitmap.data[i + 0] / 0xff;
+      rgb[j + 1] = bitmap.data[i + 1] / 0xff;
+      rgb[j + 2] = bitmap.data[i + 2] / 0xff;
+    }
+
+    const rects = this.computeRects();
+
+    const grid = new Float32Array(GRID_SIZE * GRID_SIZE * GRID_DIMS);
+    for (const rect of rects) {
+      const scaledRect: IOrientedRect = {
+        cx: rect.cx / bitmap.width,
+        cy: rect.cy / bitmap.height,
+
+        // This is fine only for square output
+        width: rect.width / bitmap.width,
+        height: rect.height / bitmap.height,
+
+        angle: rect.angle,
+      };
+
+      const gridX = Math.floor(rect.cx * GRID_SIZE);
+      const gridY = Math.floor(rect.cy * GRID_SIZE);
+      const gridOff = (gridY * GRID_SIZE + gridX) * GRID_DIMS;
+
+      // Cell is busy
+      if (grid[gridOff + 5] !== 0) {
+        continue;
+      }
+
+      grid[gridOff + 0] = scaledRect.cx - (gridX / (GRID_SIZE - 1));
+      grid[gridOff + 1] = scaledRect.cy - (gridY / (GRID_SIZE - 1));
+      grid[gridOff + 2] = scaledRect.width;
+      grid[gridOff + 3] = scaledRect.height;
+      grid[gridOff + 4] = scaledRect.angle / (2 * Math.PI);
+      grid[gridOff + 5] = 1;
+    }
+
+    return {
+      rgb,
+      grid,
+    };
+  }
+
   public async toSVG(): Promise<string> {
     // TODO(indutny): remove this after Jimp bug is fixed
-    const png: Buffer =
-      (await this.image.getBufferAsync(jimp.MIME_JPEG)) as any;
-    const src = 'data:image/png;base64,' + png.toString('base64');
+    const jpeg: Buffer =
+        (await this.image.getBufferAsync(jimp.MIME_JPEG) as any);
+    const src = `data:${jimp.MIME_JPEG};base64,${jpeg.toString('base64')}`;
     const img = `<image xlink:href="${src}" />`;
 
     const width = this.image.bitmap.width;
     const height = this.image.bitmap.height;
 
-    const polygons = this.polys.map((poly) => {
-      return polygonToRect(poly);
-    }).map((rect) => {
+    const polygons = this.computeRects().map((rect) => {
       const halfWidth = rect.width / 2;
       const halfHeight = rect.height / 2;
 
