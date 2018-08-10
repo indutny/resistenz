@@ -57,6 +57,7 @@ export async function load(): Promise<ReadonlyArray<Input>> {
     const geos = globalGeos.get(file)!.map((geo) => {
       return geo.map((point) => {
         // The points have inverted y axis in the data :(
+        // (A https://www.labelbox.com/ quirk)
         return {
           x: point.x,
           y: height - point.y,
