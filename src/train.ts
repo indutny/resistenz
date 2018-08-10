@@ -2,25 +2,14 @@ import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-node';
 
 import {
-  load, TARGET_WIDTH, TARGET_HEIGHT, GRID_SIZE, GRID_DEPTH,
+  load, TARGET_WIDTH, TARGET_HEIGHT, GRID_SIZE,
   IDataset
 } from './dataset';
-import { Model } from './model';
+import { Model, GRID_DEPTH } from './model';
 
 async function train() {
   const m = new Model();
   const dataset = await load();
-
-  function flatten(arr: ReadonlyArray<ReadonlyArray<number>>): Float32Array {
-    let res = new Float32Array(arr[0].length * arr.length);
-    let off = 0;
-    for (const entry of arr) {
-      for (let i = 0; i < entry.length; i++) {
-        res[off++] = entry[i];
-      }
-    }
-    return res;
-  }
 
   const validationCount = Math.floor(dataset.rgbs.length * 0.1);
   const train: IDataset = {
@@ -38,7 +27,7 @@ async function train() {
     const images = tf.tensor(flatten(dataset.rgbs))
         .reshape([ dataset.images.length, TARGET_WIDTH, TARGET_HEIGHT, 3 ]);
     const grids = tf.tensor(flatten(dataset.grids))
-        .reshape([ dataset.grids.length, GRID_SIZE, GRID_SIZE, GRID_DEPTH * 9 ]);
+        .reshape([ dataset.grids.length, GRID_SIZE, GRID_SIZE ]);
 
     return [ images, grids ];
   }

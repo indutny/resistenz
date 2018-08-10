@@ -1,6 +1,10 @@
 import * as tf from '@tensorflow/tfjs';
 
-import { TARGET_WIDTH, TARGET_HEIGHT, GRID_DEPTH } from './dataset';
+import {
+  TARGET_WIDTH, TARGET_HEIGHT, GRID_SIZE, GRID_DIMS
+} from './dataset';
+
+export const GRID_DEPTH = 5;
 
 export class Model {
   public readonly model: tf.Sequential;
@@ -55,12 +59,30 @@ export class Model {
 
     model.add(tf.layers.conv2d({
       kernelSize: 1,
-      filters: 9 * GRID_DEPTH,
+      filters: 6 * GRID_DEPTH,
       activation: 'relu'
     }));
 
-    model.compile({ loss: 'meanSquaredError', optimizer: 'adam' });
+    model.compile({ loss: (xs, ys) => this.loss(xs, ys), optimizer: 'adam' });
 
     this.model = model;
+  }
+
+  private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
+    const deepGrid = xs.reshape([
+      xs.shape[0],
+      GRID_SIZE,
+      GRID_SIZE,
+      GRID_DEPTH,
+      GRID_DIMS,
+    ]);
+    const actualGrid = ys.reshape([
+      ys.shape[0],
+      GRID_SIZE,
+      GRID_SIZE,
+      GRID_DIMS,
+    ]);
+    actualGrid.print();
+    return tf.tensor(0);
   }
 }
