@@ -8,65 +8,74 @@ import {
 export const GRID_DEPTH = 5;
 
 export class Model {
-  public readonly model: tf.Sequential;
+  public readonly model: tf.Model;
 
   constructor() {
-    const model = tf.sequential();
+    const image = tf.input({
+      name: 'image',
+      shape: [ TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ],
+    });
 
-    // Initial layers
-    model.add(tf.layers.conv2d({
-      inputShape: [ TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ],
-      kernelSize: 3,
-      filters: 16,
-      activation: 'relu',
-    }));
+    const targetGrid = tf.input({
+      name: 'target_grid',
+      shape: [ GRID_SIZE, GRID_SIZE, GRID_CHANNELS ],
+    });
 
-    model.add(tf.layers.maxPooling2d({
-      poolSize: [ 2, 2 ],
-      strides: [ 2, 2 ],
-    }));
+    const training = tf.input({
+      name: 'training',
+      batchShape: [ 1 ],
+    });
 
-    function convPool(kernel: number, filters: number, pool: number,
-                      stride: number) {
-      model.add(tf.layers.batchNormalization({}));
+    // TODO(indutny): replace `any` with real type
+    let x: any = image;
 
-      model.add(tf.layers.conv2d({
+    function convPool(x: any,
+                      kernel: number, filters: number, pool: number,
+                      stride: number): any {
+      x = tf.layers.batchNormalization({}).apply(x, { training });
+
+      x = tf.layers.conv2d({
         kernelSize: kernel,
         filters,
         activation: 'relu',
-      }));
+      }).apply(x);
 
-      model.add(tf.layers.maxPooling2d({
+      return tf.layers.maxPooling2d({
         poolSize: [ pool, pool ],
         strides: [ stride, stride ],
-      }));
+      }).apply(x);
     }
 
-    convPool(3, 32, 2, 2);
-    convPool(3, 64, 2, 2);
-    convPool(3, 128, 2, 2);
+    x = convPool(x, 3, 16, 2, 2);
+    x = convPool(x, 3, 32, 2, 2);
+    x = convPool(x, 3, 64, 2, 2);
+    x = convPool(x, 3, 128, 2, 2);
 
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 512,
-      activation: 'relu'
-    }));
+    // Final mapping
+    for (let i = 0; i < 2; i++) {
+      x = tf.layers.conv2d({
+        kernelSize: 3,
+        filters: 512,
+        activation: 'relu'
+      }).apply(x);
+    }
 
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 512,
-      activation: 'relu'
-    }));
-
-    model.add(tf.layers.conv2d({
+    x = tf.layers.conv2d({
       kernelSize: 1,
-      filters: 6 * GRID_DEPTH,
+      filters: GRID_DEPTH * GRID_CHANNELS,
       activation: 'relu'
-    }));
+    }).apply(x);
 
-    model.add(tf.layers.reshape({
-      targetShape: [ GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS ]
-    }));
+    x = tf.layers.reshape({
+      targetShape: [ GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS ],
+    }).apply(x);
+
+    const output = x;
+
+    const model = tf.model({
+      inputs: [ image, targetGrid, training ],
+      outputs: output,
+    });
 
     model.compile({ loss: (xs, ys) => this.loss(xs, ys), optimizer: 'adam' });
 
