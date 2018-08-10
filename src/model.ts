@@ -1,8 +1,9 @@
 import * as tf from '@tensorflow/tfjs';
 
 import {
-  TARGET_WIDTH, TARGET_HEIGHT, GRID_SIZE, GRID_DIMS
-} from './dataset';
+  TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS,
+  GRID_SIZE, GRID_CHANNELS,
+} from './input';
 
 export const GRID_DEPTH = 5;
 
@@ -14,7 +15,7 @@ export class Model {
 
     // Initial layers
     model.add(tf.layers.conv2d({
-      inputShape: [ TARGET_WIDTH, TARGET_HEIGHT, 3 ],
+      inputShape: [ TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ],
       kernelSize: 3,
       filters: 16,
       activation: 'relu',
@@ -63,26 +64,17 @@ export class Model {
       activation: 'relu'
     }));
 
+    model.add(tf.layers.reshape({
+      targetShape: [ GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS ]
+    }));
+
     model.compile({ loss: (xs, ys) => this.loss(xs, ys), optimizer: 'adam' });
 
     this.model = model;
   }
 
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
-    const deepGrid = xs.reshape([
-      xs.shape[0],
-      GRID_SIZE,
-      GRID_SIZE,
-      GRID_DEPTH,
-      GRID_DIMS,
-    ]);
-    const actualGrid = ys.reshape([
-      ys.shape[0],
-      GRID_SIZE,
-      GRID_SIZE,
-      GRID_DIMS,
-    ]);
-    actualGrid.print();
+    ys.print();
     return tf.tensor(0);
   }
 }

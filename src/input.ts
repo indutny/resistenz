@@ -2,10 +2,12 @@ import jimp = require('jimp');
 import { Buffer } from 'buffer';
 
 import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
-import { TARGET_WIDTH, TARGET_HEIGHT } from './dataset';
 
+export const TARGET_WIDTH = 416;
+export const TARGET_HEIGHT = 416;
+export const TARGET_CHANNELS = 3;
 export const GRID_SIZE = 20;
-export const GRID_DIMS = 6;
+export const GRID_CHANNELS = 6;
 
 // Maximum angle of rotation
 const MAX_ROT_ANGLE = 360;
@@ -80,9 +82,20 @@ export class Input {
       });
     });
 
-    // Resize
-    const scaleX = TARGET_WIDTH / cropW;
-    const scaleY = TARGET_HEIGHT / cropH;
+    // Random brightness/contrast adjustment
+    clone.brightness((Math.random() - 0.5) * MAX_BRIGHTNESS_DELTA);
+    clone.contrast((Math.random() - 0.5) * MAX_CONTRAST_DELTA);
+
+    // Return new network input
+    return new Input(clone, polys).resize();
+  }
+
+  public resize(): Input {
+    const clone = this.image.clone();
+    let polys = this.polys.slice();
+
+    const scaleX = TARGET_WIDTH / clone.bitmap.width;
+    const scaleY = TARGET_HEIGHT / clone.bitmap.height;
     clone.resize(TARGET_WIDTH, TARGET_HEIGHT);
 
     polys = polys.map((points) => {
@@ -91,11 +104,6 @@ export class Input {
       });
     });
 
-    // Random brightness/contrast adjustment
-    clone.brightness((Math.random() - 0.5) * MAX_BRIGHTNESS_DELTA);
-    clone.contrast((Math.random() - 0.5) * MAX_CONTRAST_DELTA);
-
-    // Return new network input
     return new Input(clone, polys);
   }
 
@@ -107,7 +115,8 @@ export class Input {
 
   public toTrainingPair(): ITrainingPair {
     const bitmap = this.image.bitmap;
-    const rgb = new Float32Array(bitmap.width * bitmap.height * 3);
+    const rgb = new Float32Array(
+        bitmap.width * bitmap.height * TARGET_CHANNELS);
     for (let i = 0, j = 0; i < bitmap.data.length; i += 4, j += 3) {
       rgb[j + 0] = bitmap.data[i + 0] / 0xff;
       rgb[j + 1] = bitmap.data[i + 1] / 0xff;
@@ -116,7 +125,7 @@ export class Input {
 
     const rects = this.computeRects();
 
-    const grid = new Float32Array(GRID_SIZE * GRID_SIZE * GRID_DIMS);
+    const grid = new Float32Array(GRID_SIZE * GRID_SIZE * GRID_CHANNELS);
     for (const rect of rects) {
       const scaledRect: IOrientedRect = {
         cx: rect.cx / bitmap.width,
@@ -131,7 +140,7 @@ export class Input {
 
       const gridX = Math.floor(rect.cx * GRID_SIZE);
       const gridY = Math.floor(rect.cy * GRID_SIZE);
-      const gridOff = (gridY * GRID_SIZE + gridX) * GRID_DIMS;
+      const gridOff = (gridY * GRID_SIZE + gridX) * GRID_CHANNELS;
 
       // Cell is busy
       if (grid[gridOff + 5] !== 0) {

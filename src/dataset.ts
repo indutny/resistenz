@@ -12,9 +12,6 @@ const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const LABELS = path.join(DATASET_DIR, 'labels.json');
 const IMAGE_DIR = path.join(DATASET_DIR, 'resized');
 
-export const TARGET_WIDTH = 416;
-export const TARGET_HEIGHT = 416;
-
 export async function load(): Promise<ReadonlyArray<Input>> {
   const json = await util.promisify(fs.readFile)(LABELS);
   const globalGeos: Map<string, ReadonlyArray<Polygon>> = new Map();
