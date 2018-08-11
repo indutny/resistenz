@@ -62,7 +62,6 @@ export class Input {
       });
     });
 
-
     // Randomly crop
     const crop = {
       top: this.random() * MAX_CROP_PERCENT,
