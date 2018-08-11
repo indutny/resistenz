@@ -1,5 +1,6 @@
-import jimp = require('jimp');
+import * as assert from 'assert';
 import { Buffer } from 'buffer';
+import jimp = require('jimp');
 
 import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
 
@@ -152,8 +153,10 @@ export class Input {
         angle: rect.angle,
       };
 
-      const gridX = Math.floor(scaledRect.cx * GRID_SIZE);
-      const gridY = Math.floor(scaledRect.cy * GRID_SIZE);
+      // TODO(indutny): this is weird, it should be just`GRID_SIZE`
+      const gridX = (scaledRect.cx * (GRID_SIZE - 1)) | 0;
+      const gridY = (scaledRect.cy * (GRID_SIZE - 1)) | 0;
+
       const gridOff = (gridY * GRID_SIZE + gridX) * GRID_CHANNELS;
 
       // Cell is busy
@@ -166,8 +169,14 @@ export class Input {
         angle += 1;
       }
 
-      grid[gridOff + 0] = scaledRect.cx - (gridX / (GRID_SIZE - 1));
-      grid[gridOff + 1] = scaledRect.cy - (gridY / (GRID_SIZE - 1));
+      const cx = scaledRect.cx - (gridX / (GRID_SIZE - 1));
+      const cy = scaledRect.cy - (gridY / (GRID_SIZE - 1));
+      assert(0 <= cx && cx <= 1, '`cx` out of bounds');
+      assert(0 <= cy && cy <= 1, '`cy` out of bounds');
+
+      grid[gridOff + 0] = cx;
+      grid[gridOff + 1] = cy;
+
       grid[gridOff + 2] = scaledRect.width;
       grid[gridOff + 3] = scaledRect.height;
       grid[gridOff + 4] = angle;
@@ -180,7 +189,7 @@ export class Input {
     };
   }
 
-  public async toSVG(): Promise<string> {
+  public async toSVG(rects?: ReadonlyArray<IOrientedRect>): Promise<string> {
     // TODO(indutny): remove this after Jimp bug is fixed
     const jpeg: Buffer =
         (await this.image.getBufferAsync(jimp.MIME_JPEG) as any);
@@ -190,7 +199,7 @@ export class Input {
     const width = this.image.bitmap.width;
     const height = this.image.bitmap.height;
 
-    const polygons = this.computeRects().map((rect) => {
+    const polygons = (rects || this.computeRects()).map((rect) => {
       const halfWidth = rect.width / 2;
       const halfHeight = rect.height / 2;
 
@@ -220,5 +229,38 @@ export class Input {
         ${img}
         ${polygons.join('\n')}
       </svg>`;
+  }
+
+  public predictionToRects(
+      prediction: Float32Array | Int32Array | Uint8Array,
+      depth: number,
+      threshold: number = 0.5): ReadonlyArray<IOrientedRect> {
+    assert.strictEqual(prediction.length,
+        GRID_SIZE * GRID_SIZE * depth * GRID_CHANNELS);
+
+    const bitmap = this.image.bitmap;
+
+    const rects: IOrientedRect[] = [];
+    for (let i = 0; i < prediction.length; i += GRID_CHANNELS) {
+      const confidence = prediction[i + 5];
+      if (confidence < threshold) {
+        continue;
+      }
+
+      const gridOff = (i / (GRID_CHANNELS * depth)) | 0;
+      const gridX = (gridOff % GRID_SIZE) / (GRID_SIZE - 1);
+      const gridY = ((gridOff / GRID_SIZE) | 0) / (GRID_SIZE - 1);
+
+      const rect: IOrientedRect = {
+        cx: (prediction[i + 0] + gridX) * bitmap.width,
+        cy: (prediction[i + 1] + gridY) * bitmap.height,
+        width: (prediction[i + 2]) * bitmap.width,
+        height: (prediction[i + 3]) * bitmap.height,
+        angle: prediction[i + 4] * Math.PI,
+      };
+
+      rects.push(rect);
+    }
+    return rects;
   }
 }

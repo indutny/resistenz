@@ -161,11 +161,6 @@ export class Model {
       const objectCount = hasObject.sum(-1).sum(-1);
       const noObjectCount = noObject.sum(-1).sum(-1);
 
-      console.log('max IOU');
-      iou.max().print();
-      console.log('mean IOU');
-      iou.mean(-1).mul(hasObject).div(objectCount).sum(-1).sum(-1).mean().print();
-
       // Compute losses
       const objLoss = tf.squaredDifference(x.confidence, y.confidence)
           .mul(onMask).sum(-1)
@@ -189,7 +184,7 @@ export class Model {
           .mul(hasObject).div(objectCount).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_IOU));
 
-      return boxLoss;
+      return objLoss.add(noObjLoss).add(boxLoss);
     });
   }
 }

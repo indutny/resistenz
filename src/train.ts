@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-node';
 
@@ -6,6 +7,9 @@ import {
   ITrainingPair, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS,
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
+import {
+  IOrientedRect,
+} from './utils';
 import { Model, GRID_DEPTH } from './model';
 
 async function train() {
@@ -55,7 +59,8 @@ async function train() {
     console.log('Randomizing training data...');
     let ts = Date.now();
 
-    const train = trainSrc.map((input) => input.randomize().toTrainingPair());
+    const trainInputs = trainSrc.map((input) => input.randomize());
+    const train = trainInputs.map((input) => input.toTrainingPair());
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
 
     console.log('Epoch %d', epoch);
@@ -71,8 +76,17 @@ async function train() {
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
 
     console.log('metrics %j', history.history);
+    console.log('memory %j', tf.memory());
+
+    const test = tensorify([ trainInputs[0].toTrainingPair() ]);
+    const prediction = await (m.model.predict(test.image) as tf.Tensor).data();
+
+    const rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH);
+    const svg = await trainInputs[0].toSVG(rects);
+    fs.writeFileSync('/tmp/1.svg', svg);
 
     // Clean-up memory?
+    tf.dispose(test);
     tf.dispose(trainingData);
   }
 }
