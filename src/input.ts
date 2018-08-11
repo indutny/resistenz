@@ -161,11 +161,16 @@ export class Input {
         continue;
       }
 
+      let angle = scaledRect.angle / Math.PI;
+      if (angle < 0) {
+        angle += 1;
+      }
+
       grid[gridOff + 0] = scaledRect.cx - (gridX / (GRID_SIZE - 1));
       grid[gridOff + 1] = scaledRect.cy - (gridY / (GRID_SIZE - 1));
       grid[gridOff + 2] = scaledRect.width;
       grid[gridOff + 3] = scaledRect.height;
-      grid[gridOff + 4] = scaledRect.angle;
+      grid[gridOff + 4] = angle;
       grid[gridOff + 5] = 1;
     }
 

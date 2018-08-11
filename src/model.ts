@@ -5,13 +5,16 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 
-export const GRID_DEPTH = 1;
+export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
 const LR = 1e-3;
+
+const EPSILON = tf.scalar(1e-7);
+const PI = tf.scalar(Math.PI);
 
 export class Model {
   public readonly model: tf.Sequential;
@@ -67,7 +70,7 @@ export class Model {
     model.add(tf.layers.conv2d({
       kernelSize: 1,
       filters: GRID_CHANNELS * GRID_DEPTH,
-      activation: 'relu'
+      activation: 'sigmoid'
     }));
 
     model.add(tf.layers.reshape({
@@ -85,16 +88,12 @@ export class Model {
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
     return tf.tidy(() => {
       // shape == [ batch, grid_size, grid_size, grid_depth, grid_channels ]
-      function parseBox(out: tf.Tensor, normalize: boolean = false) {
+      function parseBox(out: tf.Tensor) {
         let [ center, size, angle, confidence ] =
             tf.split(out, [ 2, 2, 1, 1 ], -1);
 
-        angle = tf.squeeze(angle, [ angle.rank - 1 ]);
+        angle = PI.mul(tf.squeeze(angle, [ angle.rank - 1 ]));
         confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
-
-        if (normalize) {
-          confidence = tf.sigmoid(confidence);
-        }
 
         const box = {
           center,
@@ -122,8 +121,9 @@ export class Model {
       }
 
       const x = parseBox(xs);
-      const y = parseBox(ys, true);
+      const y = parseBox(ys);
 
+      // Find intersection
       const intersection = {
         topLeft: tf.maximum(x.corners.topLeft, y.corners.topLeft),
         bottomRight: tf.minimum(x.corners.bottomRight, y.corners.bottomRight),
@@ -132,46 +132,64 @@ export class Model {
       const intersectionSize =
           tf.relu(intersection.bottomRight.sub(intersection.topLeft));
 
+      // Calculate all area
       const interArea = area(intersectionSize);
       const xArea = area(x.box.size);
       const yArea = area(y.box.size);
+      const unionArea = xArea.add(yArea).sub(interArea);
 
-      const epsilon = tf.scalar(1e-7);
-      const iou = interArea.div(xArea.add(yArea).sub(interArea).add(epsilon));
+      // Calculate Intersection over Union
+      const iou = interArea.div(unionArea.add(EPSILON));
 
+      // Multiply by angle difference
       const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
-
       const angleIOU = iou.mul(angleDiff);
 
-      let onMask: tf.Tensor;
-      if (GRID_DEPTH === 1) {
-        onMask = tf.onesLike(angleIOU);
-      } else {
-        const argMax = angleIOU.argMax(-1).flatten();
-        const maskShape = angleIOU.shape;
-        onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
-            .reshape(maskShape);
-      }
+      // Mask out maximum angleIOU in each grid group
+      const argMax = angleIOU.argMax(-1).flatten();
+      const maskShape = angleIOU.shape;
+      let onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
+          .reshape(maskShape);
 
+      // TODO(indutny): figure out why mask doesn't work...
+      onMask = tf.onesLike(onMask).div(tf.scalar(GRID_DEPTH));
+
+      // Find masks for object presence (`x` is a ground truth)
       const hasObject = x.confidence.mean(-1);
       const noObject = tf.scalar(1).sub(hasObject);
 
+      const objectCount = hasObject.sum(-1).sum(-1);
+      const noObjectCount = noObject.sum(-1).sum(-1);
+
+      console.log('max IOU');
+      iou.max().print();
+      console.log('mean IOU');
+      iou.mean(-1).mul(hasObject).div(objectCount).sum(-1).sum(-1).mean().print();
+
+      // Compute losses
       const objLoss = tf.squaredDifference(x.confidence, y.confidence)
           .mul(onMask).sum(-1)
-          .mul(hasObject)
+          .mul(hasObject).div(objectCount).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
           .mean(-1)
-          .mul(noObject)
+          .mul(noObject).div(noObjectCount).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
-      const iouLoss = tf.sub(tf.scalar(1), angleIOU)
+      const centerLoss =
+          tf.squaredDifference(x.box.center, y.box.center).sum(-1);
+      const sizeLoss = tf.squaredDifference(x.box.size, y.box.size).sum(-1);
+
+      // TODO(indutny): use periodic function here
+      const angleLoss = tf.squaredDifference(x.box.angle, y.box.angle);
+
+      const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(onMask).sum(-1)
-          .mul(hasObject)
+          .mul(hasObject).div(objectCount).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_IOU));
 
-      return objLoss;
+      return boxLoss;
     });
   }
 }
