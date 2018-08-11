@@ -70,7 +70,8 @@ async function train() {
         epochs: epoch + 1,
       });
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
-    console.log(history);
+
+    console.log('metrics %j', history.history);
 
     // Clean-up memory?
     tf.dispose(trainingData);
