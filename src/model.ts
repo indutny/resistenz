@@ -11,7 +11,7 @@ const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-3;
+const LR = 1e-5;
 
 const EPSILON = tf.scalar(1e-7);
 const PI = tf.scalar(Math.PI);
@@ -22,55 +22,52 @@ export class Model {
   constructor() {
     const model = tf.sequential();
 
-    // Initial layers
-    model.add(tf.layers.conv2d({
+    // Just a no-op to specify input layer shape
+    model.add(tf.layers.activation({
       inputShape: [ TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ],
-      kernelSize: 3,
-      filters: 16,
-      activation: 'relu',
-    }));
-
-    model.add(tf.layers.maxPooling2d({
-      poolSize: [ 2, 2 ],
-      strides: [ 2, 2 ],
+      activation: 'linear',
     }));
 
     function convPool(kernel: number, filters: number, pool: number,
                       stride: number) {
-      model.add(tf.layers.batchNormalization({}));
-
       model.add(tf.layers.conv2d({
         kernelSize: kernel,
         filters,
-        activation: 'relu',
+        padding: 'same',
       }));
+
+      model.add(tf.layers.activation({ activation: 'relu' }));
+
+      model.add(tf.layers.batchNormalization({}));
 
       model.add(tf.layers.maxPooling2d({
         poolSize: [ pool, pool ],
         strides: [ stride, stride ],
+        padding: 'same',
       }));
     }
 
+    // TinyYOLO
+    convPool(3, 16, 2, 2);
     convPool(3, 32, 2, 2);
     convPool(3, 64, 2, 2);
     convPool(3, 128, 2, 2);
+    convPool(3, 256, 2, 2);
+    convPool(3, 512, 2, 1);
 
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 512,
-      activation: 'relu'
-    }));
-
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 512,
-      activation: 'relu'
-    }));
+    for (let i = 0; i < 2; i++) {
+      model.add(tf.layers.conv2d({
+        kernelSize: 3,
+        filters: 1024,
+        activation: 'relu',
+        padding: 'same',
+      }));
+    }
 
     model.add(tf.layers.conv2d({
       kernelSize: 1,
       filters: GRID_CHANNELS * GRID_DEPTH,
-      activation: 'sigmoid'
+      activation: 'sigmoid',
     }));
 
     model.add(tf.layers.reshape({
@@ -82,6 +79,8 @@ export class Model {
       optimizer: tf.train.adam(LR),
     });
 
+    console.log(model.summary());
+
     this.model = model;
   }
 
@@ -92,8 +91,11 @@ export class Model {
         let [ center, size, angle, confidence ] =
             tf.split(out, [ 2, 2, 1, 1 ], -1);
 
-        angle = PI.mul(tf.squeeze(angle, [ angle.rank - 1 ]));
+        angle = tf.squeeze(angle, [ angle.rank - 1 ]);
         confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
+
+        // center is already multiplied, try to match up
+        size = size.mul(tf.scalar(GRID_SIZE));
 
         const box = {
           center,
@@ -142,7 +144,7 @@ export class Model {
       const iou = interArea.div(unionArea.add(EPSILON));
 
       // Multiply by angle difference
-      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
+      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle).mul(PI)));
       const angleIOU = iou.mul(angleDiff);
 
       // Mask out maximum angleIOU in each grid group

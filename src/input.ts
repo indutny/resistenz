@@ -5,9 +5,9 @@ import jimp = require('jimp');
 import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
 
 export const TARGET_WIDTH = 416;
-export const TARGET_HEIGHT = 416;
+export const TARGET_HEIGHT = TARGET_WIDTH;
 export const TARGET_CHANNELS = 3;
-export const GRID_SIZE = 20;
+export const GRID_SIZE = 13;
 export const GRID_CHANNELS = 6;
 
 // Max amount of crop from each side
@@ -28,7 +28,8 @@ export class Input {
   }
 
   private random(): number {
-    return Math.random();
+    return 0.5;
+    // return Math.random();
   }
 
   public randomize(): Input {
@@ -252,27 +253,35 @@ export class Input {
     const bitmap = this.image.bitmap;
 
     const rects: IOrientedRect[] = [];
-    for (let i = 0; i < prediction.length; i += GRID_CHANNELS) {
-      const confidence = prediction[i + 5];
-      if (confidence < threshold) {
-        continue;
+    for (let i = 0; i < prediction.length;) {
+      let max = threshold;
+
+      let rect: IColoredRect | undefined;
+      for (let j = 0; j < depth; j++, i += GRID_CHANNELS) {
+        const confidence = prediction[i + 5];
+        if (confidence < max) {
+          continue
+        }
+        max = confidence;
+
+        const gridOff = (i / (GRID_CHANNELS * depth)) | 0;
+        const gridX = gridOff % GRID_SIZE;
+        const gridY = (gridOff / GRID_SIZE) | 0;
+
+        rect = {
+          cx: (prediction[i + 0] + gridX) * bitmap.width / GRID_SIZE,
+          cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
+          width: (prediction[i + 2]) * bitmap.width,
+          height: (prediction[i + 3]) * bitmap.height,
+          angle: prediction[i + 4] * Math.PI,
+
+          alpha: confidence,
+        };
       }
 
-      const gridOff = (i / (GRID_CHANNELS * depth)) | 0;
-      const gridX = gridOff % GRID_SIZE;
-      const gridY = (gridOff / GRID_SIZE) | 0;
-
-      const rect: IColoredRect = {
-        cx: (prediction[i + 0] + gridX) * bitmap.width / GRID_SIZE,
-        cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
-        width: (prediction[i + 2]) * bitmap.width,
-        height: (prediction[i + 3]) * bitmap.height,
-        angle: prediction[i + 4] * Math.PI,
-
-        alpha: confidence,
-      };
-
-      rects.push(rect);
+      if (rect) {
+        rects.push(rect);
+      }
     }
     return rects;
   }
