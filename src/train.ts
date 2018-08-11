@@ -7,9 +7,6 @@ import {
   ITrainingPair, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS,
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
-import {
-  IOrientedRect,
-} from './utils';
 import { Model, GRID_DEPTH } from './model';
 
 async function train() {
@@ -81,7 +78,7 @@ async function train() {
     const test = tensorify([ trainInputs[0].toTrainingPair() ]);
     const prediction = await (m.model.predict(test.image) as tf.Tensor).data();
 
-    const rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH);
+    const rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH, 0.2);
     const svg = await trainInputs[0].toSVG(rects);
     fs.writeFileSync('/tmp/1.svg', svg);
 

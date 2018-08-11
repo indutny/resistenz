@@ -148,11 +148,8 @@ export class Model {
       // Mask out maximum angleIOU in each grid group
       const argMax = angleIOU.argMax(-1).flatten();
       const maskShape = angleIOU.shape;
-      let onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
+      const onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
           .reshape(maskShape);
-
-      // TODO(indutny): figure out why mask doesn't work...
-      onMask = tf.onesLike(onMask).div(tf.scalar(GRID_DEPTH));
 
       // Find masks for object presence (`x` is a ground truth)
       const hasObject = x.confidence.mean(-1);
