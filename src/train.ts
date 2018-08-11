@@ -17,7 +17,10 @@ async function train() {
   const inputs = await load();
 
   const validationCount = Math.floor(inputs.length * 0.1);
-  const trainSrc = inputs.slice(validationCount);
+  let trainSrc = inputs.slice(validationCount);
+  trainSrc = trainSrc.concat(trainSrc);
+  trainSrc = trainSrc.concat(trainSrc);
+
   const validateSrc = inputs.slice(0, validationCount)
     .map((val) => val.resize());
 
@@ -81,9 +84,13 @@ async function train() {
     const test = tensorify([ trainInputs[0].toTrainingPair() ]);
     const prediction = await (m.model.predict(test.image) as tf.Tensor).data();
 
-    const rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH, 0.2);
-    const svg = await trainInputs[0].toSVG(rects);
+    let rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH, 0.2);
+    let svg = await trainInputs[0].toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, 'train.svg'), svg);
+
+    rects = trainInputs[0].predictionToRects(await test.targetGrid.data(), GRID_DEPTH);
+    svg = await trainInputs[0].toSVG(rects);
+    fs.writeFileSync(path.join(IMAGE_DIR, 'train_ground.svg'), svg);
 
     // Clean-up memory?
     tf.dispose(test);

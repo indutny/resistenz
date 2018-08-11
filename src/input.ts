@@ -38,7 +38,7 @@ export class Input {
     let width = clone.bitmap.width;
     let height = clone.bitmap.height;
 
-    const center = { x: width / 2, y: height / 2 };
+    const originalCenter = { x: width / 2, y: height / 2 };
 
     // TODO(indutny): add noise?
 
@@ -47,15 +47,21 @@ export class Input {
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
     clone.rotate(-angleDeg, false);
-    polys = polys.map((points) => {
-      return points.map((p) => {
-        const t = rotate({ x: p.x - center.x, y: p.y - center.y }, angleRad);
-        return { x: t.x + center.x, y: t.y + center.y };
-      });
-    });
 
     width = clone.bitmap.width;
     height = clone.bitmap.height;
+    const rotatedCenter = { x: width / 2, y: height / 2 };
+
+    polys = polys.map((points) => {
+      return points.map((p) => {
+        const t = rotate({
+          x: p.x - originalCenter.x,
+          y: p.y - originalCenter.y
+        }, angleRad);
+        return { x: t.x + rotatedCenter.x, y: t.y + rotatedCenter.y };
+      });
+    });
+
 
     // Randomly crop
     const crop = {
@@ -81,10 +87,16 @@ export class Input {
 
     clone.crop(cropX, cropY, cropW, cropH);
     polys = polys.filter((points) => {
-      return points.every((p) => {
-        return p.x >= cropX && p.x <= cropX + cropW &&
-               p.y >= cropY && p.y <= cropY + cropH;
-      });
+      const center = { x: 0, y: 0 };
+      for (const p of points) {
+        center.x += p.x;
+        center.y += p.y;
+      }
+      center.x /= points.length;
+      center.y /= points.length;
+
+      return center.x >= cropX && center.x <= cropX + cropW &&
+             center.y >= cropY && center.y <= cropY + cropH;
     }).map((points) => {
       return points.map((p) => {
         return {
