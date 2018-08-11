@@ -35,8 +35,8 @@ export class Input {
     const clone = this.image.clone();
     let polys = this.polys.slice();
 
-    const width = clone.bitmap.width;
-    const height = clone.bitmap.height;
+    let width = clone.bitmap.width;
+    let height = clone.bitmap.height;
 
     const center = { x: width / 2, y: height / 2 };
 
@@ -53,6 +53,9 @@ export class Input {
         return { x: t.x + center.x, y: t.y + center.y };
       });
     });
+
+    width = clone.bitmap.width;
+    height = clone.bitmap.height;
 
     // Randomly crop
     const crop = {
