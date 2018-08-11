@@ -10,16 +10,16 @@ export const GRID_SIZE = 20;
 export const GRID_CHANNELS = 6;
 
 // Maximum angle of rotation
-const MAX_ROT_ANGLE = 360;
+const MAX_ROT_ANGLE = 0;
 
 // Max amount of crop from each side
 const MAX_CROP_PERCENT = 0.2;
 
 // How much brightness can be adjusted [ 0, 1 ]
-const MAX_BRIGHTNESS_DELTA = 0.5;
+const MAX_BRIGHTNESS_DELTA = 0.2;
 
 // How much contrast can be adjusted [ 0, 1 ]
-const MAX_CONTRAST_DELTA = 0.5;
+const MAX_CONTRAST_DELTA = 0.2;
 
 export interface ITrainingPair {
   readonly rgb: Float32Array;
@@ -43,7 +43,7 @@ export class Input {
     // TODO(indutny): add noise?
 
     // Randomly rotate
-    const angleDeg = Math.random() * MAX_ROT_ANGLE;
+    const angleDeg = (Math.random() - 0.5) * 2 * MAX_ROT_ANGLE;
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
     clone.rotate(-angleDeg, false);
@@ -62,10 +62,19 @@ export class Input {
       right: Math.random() * MAX_CROP_PERCENT,
     };
 
-    const cropX = Math.floor(crop.left * width);
-    const cropY = Math.floor(crop.top * height);
-    const cropW = width - cropX - Math.floor(crop.right * width);
-    const cropH = height - cropY - Math.floor(crop.bottom * height);
+    let cropX = Math.floor(crop.left * width);
+    let cropY = Math.floor(crop.top * height);
+    let cropW = width - cropX - Math.floor(crop.right * width);
+    let cropH = height - cropY - Math.floor(crop.bottom * height);
+
+    // Preserve x-y scale
+    if (cropW > cropH) {
+      cropX += Math.random() * (cropW - cropH);
+      cropW = cropH;
+    } else {
+      cropY += Math.random() * (cropH - cropW);
+      cropH = cropW;
+    }
 
     clone.crop(cropX, cropY, cropW, cropH);
     polys = polys.filter((points) => {
@@ -83,8 +92,8 @@ export class Input {
     });
 
     // Random brightness/contrast adjustment
-    clone.brightness((Math.random() - 0.5) * MAX_BRIGHTNESS_DELTA);
-    clone.contrast((Math.random() - 0.5) * MAX_CONTRAST_DELTA);
+    clone.brightness((Math.random() - 0.5) * 2 * MAX_BRIGHTNESS_DELTA);
+    clone.contrast((Math.random() - 0.5) * 2 * MAX_CONTRAST_DELTA);
 
     // Return new network input
     return new Input(clone, polys).resize();

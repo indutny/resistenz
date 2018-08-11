@@ -147,7 +147,7 @@ export class Model {
         y.corners.rightBottom.x.sub(y.corners.leftTop.x),
         y.corners.rightBottom.y.sub(y.corners.leftTop.y));
 
-      const epsilon = tf.scalar(1e-23);
+      const epsilon = tf.scalar(1e-3);
       const iou = interArea.div(xArea.add(yArea).sub(interArea).add(epsilon));
 
       const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
