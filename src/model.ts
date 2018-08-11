@@ -157,6 +157,8 @@ export class Model {
       const noObject = tf.scalar(1).sub(hasObject);
 
       const objLoss = tf.squaredDifference(x.confidence, y.confidence)
+          .mul(onMask).sum(-1)
+          .mul(hasObject)
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
