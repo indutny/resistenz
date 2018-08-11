@@ -138,8 +138,8 @@ export class Input {
         angle: rect.angle,
       };
 
-      const gridX = Math.floor(rect.cx * GRID_SIZE);
-      const gridY = Math.floor(rect.cy * GRID_SIZE);
+      const gridX = Math.floor(scaledRect.cx * GRID_SIZE);
+      const gridY = Math.floor(scaledRect.cy * GRID_SIZE);
       const gridOff = (gridY * GRID_SIZE + gridX) * GRID_CHANNELS;
 
       // Cell is busy

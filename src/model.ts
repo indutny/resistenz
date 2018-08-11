@@ -157,21 +157,26 @@ export class Model {
 
       const maskShape = angleIOU.shape;
 
-      const onMask = tf.cast(tf.oneHot(argMax, GRID_DEPTH, 1, 0), 'float32')
-          .reshape(maskShape);
-      const offMask = tf.cast(tf.oneHot(argMax, GRID_DEPTH, 0, 1), 'float32')
+      const onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
           .reshape(maskShape);
 
-      const objLoss = tf.sub(x.confidence, y.confidence).mul(onMask)
-          .sum(-1)
+      const hasObject = x.confidence.mean(-1);
+      const noObject = tf.scalar(1).sub(hasObject);
+
+      const objLoss = tf.squaredDifference(x.confidence, y.confidence)
+          .mul(onMask).sum(-1)
+          .mul(hasObject)
           .mul(tf.scalar(LAMBDA_OBJ));
 
-      const noObjLoss = tf.sub(x.confidence, y.confidence).mul(onMask)
-          .sum(-1)
+      const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
+          .mean(-1)
+          .mul(noObject)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
-      const iouLoss = tf.sub(tf.scalar(1), iou.mul(onMask).sum(-1))
-        .mul(tf.scalar(LAMBDA_IOU));
+      const iouLoss = tf.sub(tf.scalar(1), iou)
+          .mul(onMask).sum(-1)
+          .mul(hasObject)
+          .mul(tf.scalar(LAMBDA_IOU));
 
       return objLoss.add(noObjLoss).add(iouLoss);
     });
