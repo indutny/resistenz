@@ -5,7 +5,7 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 
-export const GRID_DEPTH = 5;
+export const GRID_DEPTH = 1;
 
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
@@ -85,104 +85,91 @@ export class Model {
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
     return tf.tidy(() => {
       // shape == [ batch, grid_size, grid_size, grid_depth, grid_channels ]
-      const centerXIndex = tf.tensor1d([ 0 ], 'int32');
-      const centerYIndex = tf.tensor1d([ 1 ], 'int32');
-      const widthIndex = tf.tensor1d([ 2 ], 'int32');
-      const heightIndex = tf.tensor1d([ 3 ], 'int32');
-      const angleIndex = tf.tensor1d([ 4 ], 'int32');
-      const confidenceIndex = tf.tensor1d([ 5 ], 'int32');
+      function parseBox(out: tf.Tensor, normalize: boolean = false) {
+        let [ center, size, angle, confidence ] =
+            tf.split(out, [ 2, 2, 1, 1 ], -1);
 
-      function select(t: tf.Tensor, index: tf.Tensor1D): tf.Tensor {
-        return t.gather(index, -1).squeeze([ 4 ]);
-      }
+        angle = tf.squeeze(angle, [ angle.rank - 1 ]);
+        confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
 
-      function parseBox(out: tf.Tensor) {
+        if (normalize) {
+          confidence = tf.sigmoid(confidence);
+        }
+
         const box = {
-          cx: select(out, centerXIndex),
-          cy: select(out, centerYIndex),
-          width: select(out, widthIndex),
-          height: select(out, heightIndex),
-          angle: select(out, angleIndex),
+          center,
+          size,
+          angle,
         };
 
-        const confidence = select(out, confidenceIndex);
+        const halfSize = box.size.div(tf.scalar(2));
 
         const corners = {
-          leftTop: {
-            x: box.cx.sub(box.width),
-            y: box.cy.sub(box.height),
-          },
-          rightBottom: {
-            x: box.cx.add(box.width),
-            y: box.cy.add(box.height),
-          },
+          topLeft: box.center.sub(halfSize),
+          bottomRight: box.center.add(halfSize),
         };
 
         return { box, confidence, corners };
       }
 
+      function area(size: tf.Tensor) {
+        let [ width, height ] = tf.split(size, [ 1, 1 ], -1);
+
+        width = width.squeeze([ width.rank - 1 ]);
+        height = height.squeeze([ height.rank - 1 ]);
+
+        return width.mul(height);
+      }
+
       const x = parseBox(xs);
-      const y = parseBox(ys);
+      const y = parseBox(ys, true);
 
       const intersection = {
-        leftTop: {
-          x: tf.maximum(x.corners.leftTop.x, y.corners.leftTop.x),
-          y: tf.maximum(x.corners.leftTop.y, y.corners.leftTop.y),
-        },
-        rightBottom: {
-          x: tf.minimum(x.corners.rightBottom.x, y.corners.rightBottom.x),
-          y: tf.minimum(x.corners.rightBottom.y, y.corners.rightBottom.y),
-        }
+        topLeft: tf.maximum(x.corners.topLeft, y.corners.topLeft),
+        bottomRight: tf.minimum(x.corners.bottomRight, y.corners.bottomRight),
       };
 
-      const interArea = tf.mul(
-        intersection.rightBottom.x.sub(intersection.leftTop.x),
-        intersection.rightBottom.y.sub(intersection.leftTop.y));
+      const intersectionSize =
+          tf.relu(intersection.bottomRight.sub(intersection.topLeft));
 
-      const xArea = tf.mul(
-        x.corners.rightBottom.x.sub(x.corners.leftTop.x),
-        x.corners.rightBottom.y.sub(x.corners.leftTop.y));
-
-      const yArea = tf.mul(
-        y.corners.rightBottom.x.sub(y.corners.leftTop.x),
-        y.corners.rightBottom.y.sub(y.corners.leftTop.y));
+      const interArea = area(intersectionSize);
+      const xArea = area(x.box.size);
+      const yArea = area(y.box.size);
 
       const epsilon = tf.scalar(1e-7);
       const iou = interArea.div(xArea.add(yArea).sub(interArea).add(epsilon));
 
       const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
 
-      const angleIOU = iou.mul(angleDiff).squeeze([ 4 ]);
-      const argMax = angleIOU.argMax(-1).flatten();
+      const angleIOU = iou.mul(angleDiff);
 
-      const maskShape = angleIOU.shape;
-
-      const onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
-          .reshape(maskShape);
-
-      function normalize(t: tf.Tensor) {
-        return t.div(t.flatten().sum(-1).add(epsilon));
+      let onMask: tf.Tensor;
+      if (GRID_DEPTH === 1) {
+        onMask = tf.onesLike(angleIOU);
+      } else {
+        const argMax = angleIOU.argMax(-1).flatten();
+        const maskShape = angleIOU.shape;
+        onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
+            .reshape(maskShape);
       }
 
-      const hasObject = normalize(x.confidence.mean(-1));
-      const noObject = normalize(tf.scalar(1).sub(hasObject));
+      const hasObject = x.confidence.mean(-1);
+      const noObject = tf.scalar(1).sub(hasObject);
 
       const objLoss = tf.squaredDifference(x.confidence, y.confidence)
-          .mul(onMask).sum(-1)
-          .mul(hasObject).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
           .mean(-1)
-          .mul(noObject).sum(-1).sum(-1)
+          .mul(noObject)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
-      const iouLoss = tf.sub(tf.scalar(1), iou)
+      const iouLoss = tf.sub(tf.scalar(1), angleIOU)
           .mul(onMask).sum(-1)
-          .mul(hasObject).sum(-1).sum(-1)
+          .mul(hasObject)
           .mul(tf.scalar(LAMBDA_IOU));
 
-      return objLoss.add(noObjLoss).add(iouLoss);
+      return objLoss;
     });
   }
 }

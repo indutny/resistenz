@@ -10,7 +10,7 @@ export const GRID_SIZE = 20;
 export const GRID_CHANNELS = 6;
 
 // Maximum angle of rotation
-const MAX_ROT_ANGLE = 0;
+const MAX_ROT_ANGLE = 180;
 
 // Max amount of crop from each side
 const MAX_CROP_PERCENT = 0.2;
@@ -31,6 +31,11 @@ export class Input {
               public readonly polys: ReadonlyArray<Polygon>) {
   }
 
+  private random(): number {
+    return 0.5;
+    // return Math.random();
+  }
+
   public randomize(): Input {
     const clone = this.image.clone();
     let polys = this.polys.slice();
@@ -43,7 +48,7 @@ export class Input {
     // TODO(indutny): add noise?
 
     // Randomly rotate
-    const angleDeg = (Math.random() - 0.5) * 2 * MAX_ROT_ANGLE;
+    const angleDeg = (this.random() - 0.5) * 2 * MAX_ROT_ANGLE;
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
     clone.rotate(-angleDeg, false);
@@ -56,10 +61,10 @@ export class Input {
 
     // Randomly crop
     const crop = {
-      top: Math.random() * MAX_CROP_PERCENT,
-      bottom: Math.random() * MAX_CROP_PERCENT,
-      left: Math.random() * MAX_CROP_PERCENT,
-      right: Math.random() * MAX_CROP_PERCENT,
+      top: this.random() * MAX_CROP_PERCENT,
+      bottom: this.random() * MAX_CROP_PERCENT,
+      left: this.random() * MAX_CROP_PERCENT,
+      right: this.random() * MAX_CROP_PERCENT,
     };
 
     let cropX = Math.floor(crop.left * width);
@@ -69,10 +74,10 @@ export class Input {
 
     // Preserve x-y scale
     if (cropW > cropH) {
-      cropX += Math.random() * (cropW - cropH);
+      cropX += this.random() * (cropW - cropH);
       cropW = cropH;
     } else {
-      cropY += Math.random() * (cropH - cropW);
+      cropY += this.random() * (cropH - cropW);
       cropH = cropW;
     }
 
@@ -92,8 +97,8 @@ export class Input {
     });
 
     // Random brightness/contrast adjustment
-    clone.brightness((Math.random() - 0.5) * 2 * MAX_BRIGHTNESS_DELTA);
-    clone.contrast((Math.random() - 0.5) * 2 * MAX_CONTRAST_DELTA);
+    clone.brightness((this.random() - 0.5) * 2 * MAX_BRIGHTNESS_DELTA);
+    clone.contrast((this.random() - 0.5) * 2 * MAX_CONTRAST_DELTA);
 
     // Return new network input
     return new Input(clone, polys).resize();
@@ -160,7 +165,7 @@ export class Input {
       grid[gridOff + 1] = scaledRect.cy - (gridY / (GRID_SIZE - 1));
       grid[gridOff + 2] = scaledRect.width;
       grid[gridOff + 3] = scaledRect.height;
-      grid[gridOff + 4] = scaledRect.angle / (2 * Math.PI);
+      grid[gridOff + 4] = scaledRect.angle;
       grid[gridOff + 5] = 1;
     }
 
