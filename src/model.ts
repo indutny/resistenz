@@ -152,21 +152,22 @@ export class Model {
           .reshape(maskShape);
 
       // Find masks for object presence (`x` is a ground truth)
-      const hasObject = x.confidence.mean(-1);
-      const noObject = tf.scalar(1).sub(hasObject);
-
-      const objectCount = hasObject.sum(-1).sum(-1);
-      const noObjectCount = noObject.sum(-1).sum(-1);
+      function normalize(t: tf.Tensor) {
+        const norm = t.sum(-1).sum(-1).expandDims(-1).expandDims(-1);
+        return t.div(norm.add(EPSILON));
+      }
+      const hasObject = normalize(x.confidence.mean(-1));
+      const noObject = normalize(tf.scalar(1).sub(hasObject));
 
       // Compute losses
       const objLoss = tf.squaredDifference(x.confidence, y.confidence)
           .mul(onMask).sum(-1)
-          .mul(hasObject).div(objectCount).sum(-1).sum(-1)
+          .mul(hasObject).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
           .mean(-1)
-          .mul(noObject).div(noObjectCount).sum(-1).sum(-1)
+          .mul(noObject).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
       const centerLoss =
@@ -178,7 +179,7 @@ export class Model {
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(onMask).sum(-1)
-          .mul(hasObject).div(objectCount).sum(-1).sum(-1)
+          .mul(hasObject).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_IOU));
 
       return objLoss.add(noObjLoss).add(boxLoss);

@@ -10,17 +10,8 @@ export const TARGET_CHANNELS = 3;
 export const GRID_SIZE = 20;
 export const GRID_CHANNELS = 6;
 
-// Maximum angle of rotation
-const MAX_ROT_ANGLE = 180;
-
 // Max amount of crop from each side
 const MAX_CROP_PERCENT = 0.2;
-
-// How much brightness can be adjusted [ 0, 1 ]
-const MAX_BRIGHTNESS_DELTA = 0.2;
-
-// How much contrast can be adjusted [ 0, 1 ]
-const MAX_CONTRAST_DELTA = 0.2;
 
 export interface ITrainingPair {
   readonly rgb: Float32Array;
@@ -37,8 +28,7 @@ export class Input {
   }
 
   private random(): number {
-    return 0.5;
-    // return Math.random();
+    return Math.random();
   }
 
   public randomize(): Input {
@@ -52,8 +42,8 @@ export class Input {
 
     // TODO(indutny): add noise?
 
-    // Randomly rotate
-    const angleDeg = (this.random() - 0.5) * 2 * MAX_ROT_ANGLE;
+    // Randomly rotate by 90deg
+    const angleDeg = ((this.random() * 4) | 0) * 90;
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
     clone.rotate(-angleDeg, false);
@@ -101,9 +91,8 @@ export class Input {
       });
     });
 
-    // Random brightness/contrast adjustment
-    clone.brightness((this.random() - 0.5) * 2 * MAX_BRIGHTNESS_DELTA);
-    clone.contrast((this.random() - 0.5) * 2 * MAX_CONTRAST_DELTA);
+    // Normalize image
+    clone.normalize();
 
     // Return new network input
     return new Input(clone, polys).resize();

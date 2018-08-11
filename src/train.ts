@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-node';
 
@@ -8,6 +9,8 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 import { Model, GRID_DEPTH } from './model';
+
+const IMAGE_DIR = path.join(__dirname, '..', 'images');
 
 async function train() {
   const m = new Model();
@@ -80,7 +83,7 @@ async function train() {
 
     const rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH, 0.2);
     const svg = await trainInputs[0].toSVG(rects);
-    fs.writeFileSync('/tmp/1.svg', svg);
+    fs.writeFileSync(path.join(IMAGE_DIR, 'train.svg'), svg);
 
     // Clean-up memory?
     tf.dispose(test);
