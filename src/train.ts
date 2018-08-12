@@ -19,10 +19,7 @@ async function train() {
   const inputs = await load();
 
   const validationCount = Math.floor(inputs.length * 0.1);
-  let trainSrc = inputs.slice(validationCount);
-  trainSrc = trainSrc.concat(trainSrc);
-  trainSrc = trainSrc.concat(trainSrc);
-  trainSrc = trainSrc.concat(trainSrc);
+  const trainSrc = inputs.slice(validationCount);
 
   const validateSrc = inputs.slice(0, validationCount)
     .map((val) => val.resize());
