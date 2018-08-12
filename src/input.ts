@@ -240,7 +240,7 @@ export class Input {
           `rgba(255,0,0,${alpha})` :
           `rgba(0,255,0,${alpha})`;
 
-      const fillColor = alpha < 0.5 ? `rgba(0,0,0,0)` :
+      const fillColor = alpha < 0.5 ? 'none' :
         `rgba(0,255,0,${(alpha - 0.5) / 2})`;
 
       return `<polygon points="${points}" fill="${fillColor}" ` +
