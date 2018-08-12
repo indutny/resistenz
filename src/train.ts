@@ -74,6 +74,7 @@ async function train() {
       trainingData.targetGrid,
       {
         initialEpoch: epoch,
+        batchSize: 16,
         epochs: epoch + 50,
         callbacks: {
           onEpochEnd: async (epoch, logs) => {

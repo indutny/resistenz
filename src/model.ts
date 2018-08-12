@@ -13,7 +13,7 @@ const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-5;
+const LR = 1e-4;
 
 const EPSILON = tf.scalar(1e-23);
 const PI = tf.scalar(Math.PI);
