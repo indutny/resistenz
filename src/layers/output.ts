@@ -9,9 +9,14 @@ export class Output extends tf.layers.Layer {
     }
     this.invokeCallHook(inputs, kwargs);
     const [ coords, angle, confidence ] = tf.split(inputs, [ 4, 1, 1 ], -1);
+
+    const depth = inputs.shape[inputs.shape.length - 2];
+    const anglePrior = tf.linspace(0, 0.5, depth)
+      .reshape(inputs.shape.slice(0, -2).fill(1).concat(depth)).expandDims(-1);
+
     return tf.concat([
       tf.sigmoid(coords),
-      angle,
+      angle.add(anglePrior),
       tf.sigmoid(confidence),
     ], -1);
   }
