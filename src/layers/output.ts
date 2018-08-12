@@ -12,7 +12,7 @@ export class Output extends tf.layers.Layer {
     return tf.concat([
       tf.sigmoid(coords),
       angle,
-      tf.sigmoid(confidence)
+      tf.sigmoid(confidence),
     ], -1);
   }
 
