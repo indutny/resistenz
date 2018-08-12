@@ -8,14 +8,16 @@ export class Output extends tf.layers.Layer {
       inputs = inputs[0];
     }
     this.invokeCallHook(inputs, kwargs);
-    const [ coords, angle, confidence ] = tf.split(inputs, [ 4, 1, 1 ], -1);
+    const [ center, size, angle, confidence ] =
+        tf.split(inputs, [ 2, 2, 1, 1 ], -1);
 
     const depth = inputs.shape[inputs.shape.length - 2];
     const anglePrior = tf.linspace(0, 0.5, depth)
       .reshape(inputs.shape.slice(0, -2).fill(1).concat(depth)).expandDims(-1);
 
     return tf.concat([
-      tf.sigmoid(coords),
+      tf.sigmoid(center),
+      tf.exp(size),
       angle.add(anglePrior),
       tf.sigmoid(confidence),
     ], -1);
