@@ -186,11 +186,7 @@ export class Input {
       grid[gridOff + 2] = width;
       grid[gridOff + 3] = height;
 
-      let angle = scaledRect.angle / Math.PI;
-      if (angle < 0) {
-        angle += 1;
-      }
-
+      const angle = scaledRect.angle / Math.PI;
       assert(0 <= angle && angle <= 1, '`angle` out of bounds');
 
       grid[gridOff + 4] = angle;

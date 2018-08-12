@@ -86,7 +86,10 @@ export function polygonToRect(polygon: Polygon): IOrientedRect {
   }).map((entry) => entry.vec)[0];
 
   // Compute angle without preference for particular orientation
-  const angle = Math.atan2(longest.y, longest.x);
+  let angle = Math.atan2(longest.y, longest.x);
+  if (angle < 0) {
+    angle += Math.PI;
+  }
 
   return { cx, cy, width, height, angle };
 }
