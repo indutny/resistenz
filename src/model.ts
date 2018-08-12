@@ -176,7 +176,10 @@ export class Model {
 
       const centerLoss =
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
-      const sizeLoss = tf.squaredDifference(x.box.size, y.box.size).sum(-1);
+
+      // Use square root of size as in YOLO's paper
+      const sizeLoss = tf.squaredDifference(
+          x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
       // TODO(indutny): use smooth l1
       const angleLoss = tf.abs(tf.sin(x.box.angle.sub(y.box.angle)));
