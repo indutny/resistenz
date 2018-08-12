@@ -79,7 +79,9 @@ async function train() {
         initialEpoch: epoch,
         epochs: epoch + 50,
         callbacks: {
-          onEpochEnd: async () => { console.log('epoch end'); },
+          onEpochEnd: async (epoch, logs) => {
+            console.log('epoch %d end %j', epoch, logs);
+          },
         },
       });
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
