@@ -86,16 +86,18 @@ export class Model {
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
     return tf.tidy(() => {
       // shape == [ batch, grid_size, grid_size, grid_depth, grid_channels ]
-      function parseBox(out: tf.Tensor) {
+      function parseBox(out: tf.Tensor, normalize: boolean = false) {
         let [ center, size, angle, confidence ] =
             tf.split(out, [ 2, 2, 1, 1 ], -1);
 
         angle = tf.squeeze(angle, [ angle.rank - 1 ]);
         confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
 
-        center = tf.sigmoid(center);
-        size = tf.sigmoid(size);
-        confidence = tf.sigmoid(confidence);
+        if (normalize) {
+          center = tf.sigmoid(center);
+          size = tf.sigmoid(size);
+          confidence = tf.sigmoid(confidence);
+        }
 
         angle = angle.mul(PI);
 
@@ -125,7 +127,7 @@ export class Model {
       }
 
       const x = parseBox(xs);
-      const y = parseBox(ys);
+      const y = parseBox(ys, true);
 
       // Find intersection
       const intersection = {
