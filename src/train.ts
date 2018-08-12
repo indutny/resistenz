@@ -17,7 +17,10 @@ async function train() {
   const inputs = await load();
 
   const validationCount = Math.floor(inputs.length * 0.1);
-  const trainSrc = inputs.slice(validationCount);
+  let trainSrc = inputs.slice(validationCount);
+  trainSrc = trainSrc.concat(trainSrc);
+  trainSrc = trainSrc.concat(trainSrc);
+  trainSrc = trainSrc.concat(trainSrc);
 
   const validateSrc = inputs.slice(0, validationCount)
     .map((val) => val.resize());
@@ -56,7 +59,7 @@ async function train() {
     tensorify(validateSrc.map((input) => input.toTrainingPair()));
 
   console.log('Running fit');
-  for (let epoch = 1; epoch < 1000000; epoch++) {
+  for (let epoch = 1; epoch < 1000000; epoch += 50) {
     console.log('Randomizing training data...');
     let ts = Date.now();
 
@@ -72,7 +75,10 @@ async function train() {
       trainingData.targetGrid,
       {
         initialEpoch: epoch,
-        epochs: epoch + 1,
+        epochs: epoch + 50,
+        callbacks: {
+          onEpochEnd: async () => { console.log('epoch end'); },
+        },
       });
     console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
 

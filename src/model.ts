@@ -67,7 +67,6 @@ export class Model {
     model.add(tf.layers.conv2d({
       kernelSize: 1,
       filters: GRID_CHANNELS * GRID_DEPTH,
-      activation: 'sigmoid',
     }));
 
     model.add(tf.layers.reshape({
@@ -94,8 +93,11 @@ export class Model {
         angle = tf.squeeze(angle, [ angle.rank - 1 ]);
         confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
 
-        // center is already multiplied, try to match up
-        size = size.mul(tf.scalar(GRID_SIZE));
+        center = tf.sigmoid(center);
+        size = tf.sigmoid(size);
+        confidence = tf.sigmoid(confidence);
+
+        angle = angle.mul(PI);
 
         const box = {
           center,
@@ -144,7 +146,7 @@ export class Model {
       const iou = interArea.div(unionArea.add(EPSILON));
 
       // Multiply by angle difference
-      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle).mul(PI)));
+      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
       const angleIOU = iou.mul(angleDiff);
 
       // Mask out maximum angleIOU in each grid group
@@ -168,7 +170,7 @@ export class Model {
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
-          .mean(-1)
+          .div(tf.scalar(GRID_DEPTH - 1)).sum(-1)
           .mul(noObject).sum(-1).sum(-1)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
@@ -176,8 +178,8 @@ export class Model {
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
       const sizeLoss = tf.squaredDifference(x.box.size, y.box.size).sum(-1);
 
-      // TODO(indutny): use periodic function here
-      const angleLoss = tf.squaredDifference(x.box.angle, y.box.angle);
+      // TODO(indutny): use smooth l1
+      const angleLoss = tf.sin(x.box.angle.sub(y.box.angle)).pow(tf.scalar(2));
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(onMask).sum(-1)

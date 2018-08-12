@@ -28,8 +28,7 @@ export class Input {
   }
 
   private random(): number {
-    return 0.5;
-    // return Math.random();
+    return Math.random();
   }
 
   public randomize(): Input {
