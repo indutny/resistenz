@@ -11,7 +11,7 @@ export const GRID_SIZE = 13;
 export const GRID_CHANNELS = 6;
 
 // Max amount of crop from each side
-const MAX_CROP_PERCENT = 0.2;
+const MAX_CROP_PERCENT = 0.1;
 
 export interface ITrainingPair {
   readonly rgb: Float32Array;

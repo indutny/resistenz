@@ -56,7 +56,7 @@ async function train() {
     tensorify(validateSrc.map((input) => input.toTrainingPair()));
 
   console.log('Running fit');
-  for (let epoch = 1; epoch < 1000; epoch++) {
+  for (let epoch = 1; epoch < 1000000; epoch++) {
     console.log('Randomizing training data...');
     let ts = Date.now();
 

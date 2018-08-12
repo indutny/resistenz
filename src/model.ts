@@ -13,7 +13,7 @@ const LAMBDA_IOU = 5;
 
 const LR = 1e-5;
 
-const EPSILON = tf.scalar(1e-7);
+const EPSILON = tf.scalar(1e-23);
 const PI = tf.scalar(Math.PI);
 
 export class Model {
