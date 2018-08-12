@@ -11,6 +11,8 @@ import {
 import { Model, GRID_DEPTH } from './model';
 
 const IMAGE_DIR = path.join(__dirname, '..', 'images');
+const SAVE_DIR = path.join(__dirname, '..', 'saves');
+const SAVE_FILE = path.join(SAVE_DIR, 'model');
 
 async function train() {
   const m = new Model();
@@ -99,6 +101,8 @@ async function train() {
     // Clean-up memory?
     tf.dispose(test);
     tf.dispose(trainingData);
+
+    await m.model.save(`file://${SAVE_FILE}`);
   }
 }
 

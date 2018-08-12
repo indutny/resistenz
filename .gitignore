@@ -2,3 +2,5 @@
 node_modules/
 npm-debug.log
 images/*.svg
+saves/*
+!saves/.gitkeep
