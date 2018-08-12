@@ -179,7 +179,7 @@ export class Model {
       const sizeLoss = tf.squaredDifference(x.box.size, y.box.size).sum(-1);
 
       // TODO(indutny): use smooth l1
-      const angleLoss = tf.sin(x.box.angle.sub(y.box.angle)).pow(tf.scalar(2));
+      const angleLoss = tf.abs(tf.sin(x.box.angle.sub(y.box.angle)));
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(onMask).sum(-1)
