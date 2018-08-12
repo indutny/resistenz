@@ -236,7 +236,15 @@ export class Input {
 
       const alpha = rect.alpha === undefined ? 1 : rect.alpha;
 
-      return `<polygon points="${points}" fill="none" stroke="rgba(255,0,0,${alpha})"/>`;
+      const color = alpha < 0.5 ?
+          `rgba(255,0,0,${alpha})` :
+          `rgba(0,255,0,${alpha})`;
+
+      const fillColor = alpha < 0.5 ? `rgba(0,0,0,0)` :
+          `rgba(0,255,0,${alpha - 0.5})`;
+
+      return `<polygon points="${points}" fill="${fillColor}" ` +
+        `stroke="${color}"/>`;
     });
 
     return `

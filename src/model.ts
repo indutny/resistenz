@@ -12,6 +12,7 @@ export const GRID_DEPTH = 5;
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
+const LAMBDA_ANGLE = 5;
 
 const LR = 1e-5;
 
@@ -156,22 +157,16 @@ export class Model {
           .reshape(maskShape);
 
       // Find masks for object presence (`x` is a ground truth)
-      function normalize(t: tf.Tensor) {
-        const norm = t.sum(-1).sum(-1).expandDims(-1).expandDims(-1);
-        return t.div(norm.add(EPSILON));
-      }
-      const hasObject = normalize(x.confidence.mean(-1));
-      const noObject = normalize(tf.scalar(1).sub(hasObject));
+      const hasObject = x.confidence.mul(onMask);
+      const noObject = tf.scalar(1).sub(hasObject);
 
       // Compute losses
-      const objLoss = tf.squaredDifference(x.confidence, y.confidence)
-          .mul(onMask).sum(-1)
-          .mul(hasObject).sum(-1).sum(-1)
+      const objLoss = tf.squaredDifference(tf.scalar(1), y.confidence)
+          .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_OBJ));
 
-      const noObjLoss = tf.squaredDifference(x.confidence, y.confidence)
-          .div(tf.scalar(GRID_DEPTH - 1)).sum(-1)
-          .mul(noObject).sum(-1).sum(-1)
+      const noObjLoss = y.confidence.square()
+          .mul(noObject).mean(-1)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
       const centerLoss =
@@ -182,11 +177,11 @@ export class Model {
           x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
       // TODO(indutny): use smooth l1
-      const angleLoss = tf.abs(tf.sin(x.box.angle.sub(y.box.angle)));
+      const angleLoss = tf.abs(tf.sin(x.box.angle.sub(y.box.angle)))
+          .mul(tf.scalar(LAMBDA_ANGLE));
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
-          .mul(onMask).sum(-1)
-          .mul(hasObject).sum(-1).sum(-1)
+          .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_IOU));
 
       return objLoss.add(noObjLoss).add(boxLoss);
