@@ -42,7 +42,7 @@ export class Input {
 
     // TODO(indutny): add noise?
 
-    // Randomly rotate by 90deg
+    // Randomly rotate by 90, 180, or 270 deg
     const angleDeg = ((this.random() * 4) | 0) * 90;
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
@@ -170,11 +170,6 @@ export class Input {
         continue;
       }
 
-      let angle = scaledRect.angle / Math.PI;
-      if (angle < 0) {
-        angle += 1;
-      }
-
       const cx = scaledRect.cx * GRID_SIZE - gridX;
       const cy = scaledRect.cy * GRID_SIZE - gridY;
       assert(0 <= cx && cx <= 1, '`cx` out of bounds');
@@ -183,9 +178,24 @@ export class Input {
       grid[gridOff + 0] = cx;
       grid[gridOff + 1] = cy;
 
-      grid[gridOff + 2] = scaledRect.width;
-      grid[gridOff + 3] = scaledRect.height;
+      const width = scaledRect.width;
+      const height = scaledRect.height;
+      assert(0 <= width && width <= 1, '`width` out of bounds');
+      assert(0 <= height && height <= 1, '`height` out of bounds');
+
+      grid[gridOff + 2] = width;
+      grid[gridOff + 3] = height;
+
+      let angle = scaledRect.angle / Math.PI;
+      if (angle < 0) {
+        angle += 1;
+      }
+
+      assert(0 <= angle && angle <= 1, '`angle` out of bounds');
+
       grid[gridOff + 4] = angle;
+
+      // Confidence
       grid[gridOff + 5] = 1;
     }
 
