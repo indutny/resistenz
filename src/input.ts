@@ -252,35 +252,27 @@ export class Input {
     const bitmap = this.image.bitmap;
 
     const rects: IOrientedRect[] = [];
-    for (let i = 0; i < prediction.length;) {
-      let max = threshold;
-
-      let rect: IColoredRect | undefined;
-      for (let j = 0; j < depth; j++, i += GRID_CHANNELS) {
-        const confidence = prediction[i + 5];
-        if (confidence < max) {
-          continue
-        }
-        max = confidence;
-
-        const gridOff = (i / (GRID_CHANNELS * depth)) | 0;
-        const gridX = gridOff % GRID_SIZE;
-        const gridY = (gridOff / GRID_SIZE) | 0;
-
-        rect = {
-          cx: (prediction[i + 0] + gridX) * bitmap.width / GRID_SIZE,
-          cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
-          width: (prediction[i + 2]) * bitmap.width,
-          height: (prediction[i + 3]) * bitmap.height,
-          angle: prediction[i + 4] * Math.PI,
-
-          alpha: confidence,
-        };
+    for (let i = 0; i < prediction.length; i += GRID_CHANNELS) {
+      const confidence = prediction[i + 5];
+      if (confidence < threshold) {
+        continue
       }
 
-      if (rect) {
-        rects.push(rect);
-      }
+      const gridOff = (i / (GRID_CHANNELS * depth)) | 0;
+      const gridX = gridOff % GRID_SIZE;
+      const gridY = (gridOff / GRID_SIZE) | 0;
+
+      const rect: IColoredRect = {
+        cx: (prediction[i + 0] + gridX) * bitmap.width / GRID_SIZE,
+        cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
+        width: (prediction[i + 2]) * bitmap.width,
+        height: (prediction[i + 3]) * bitmap.height,
+        angle: prediction[i + 4] * Math.PI,
+
+        alpha: confidence,
+      };
+
+      rects.push(rect);
     }
     return rects;
   }
