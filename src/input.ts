@@ -241,7 +241,7 @@ export class Input {
           `rgba(0,255,0,${alpha})`;
 
       const fillColor = alpha < 0.5 ? `rgba(0,0,0,0)` :
-          `rgba(0,255,0,${alpha - 0.5})`;
+        `rgba(0,255,0,${(alpha - 0.5) / 2})`;
 
       return `<polygon points="${points}" fill="${fillColor}" ` +
         `stroke="${color}"/>`;
