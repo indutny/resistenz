@@ -5,6 +5,8 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 
+import { Output } from './layers/output';
+
 export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
@@ -67,12 +69,13 @@ export class Model {
     model.add(tf.layers.conv2d({
       kernelSize: 1,
       filters: GRID_CHANNELS * GRID_DEPTH,
-      activation: 'sigmoid',
     }));
 
     model.add(tf.layers.reshape({
       targetShape: [ GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS ]
     }));
+
+    model.add(new Output({}));
 
     model.compile({
       loss: (xs, ys) => this.loss(xs, ys),
