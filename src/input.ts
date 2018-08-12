@@ -170,8 +170,8 @@ export class Input {
         continue;
       }
 
-      const cx = scaledRect.cx * GRID_SIZE - gridX;
-      const cy = scaledRect.cy * GRID_SIZE - gridY;
+      const cx = scaledRect.cx - gridX / GRID_SIZE;
+      const cy = scaledRect.cy - gridY / GRID_SIZE;
       assert(0 <= cx && cx <= 1, '`cx` out of bounds');
       assert(0 <= cy && cy <= 1, '`cy` out of bounds');
 
@@ -269,8 +269,8 @@ export class Input {
       const gridY = (gridOff / GRID_SIZE) | 0;
 
       const rect: IColoredRect = {
-        cx: (prediction[i + 0] + gridX) * bitmap.width / GRID_SIZE,
-        cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
+        cx: (prediction[i + 0] + gridX / GRID_SIZE) * bitmap.width,
+        cy: (prediction[i + 1] + gridY / GRID_SIZE) * bitmap.height,
         width: (prediction[i + 2]) * bitmap.width,
         height: (prediction[i + 3]) * bitmap.height,
         angle: prediction[i + 4] * Math.PI,
