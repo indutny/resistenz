@@ -67,6 +67,7 @@ export class Model {
     model.add(tf.layers.conv2d({
       kernelSize: 1,
       filters: GRID_CHANNELS * GRID_DEPTH,
+      activation: 'sigmoid',
     }));
 
     model.add(tf.layers.reshape({
@@ -86,18 +87,12 @@ export class Model {
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
     return tf.tidy(() => {
       // shape == [ batch, grid_size, grid_size, grid_depth, grid_channels ]
-      function parseBox(out: tf.Tensor, normalize: boolean = false) {
+      function parseBox(out: tf.Tensor) {
         let [ center, size, angle, confidence ] =
             tf.split(out, [ 2, 2, 1, 1 ], -1);
 
         angle = tf.squeeze(angle, [ angle.rank - 1 ]);
         confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
-
-        if (normalize) {
-          center = tf.sigmoid(center);
-          size = tf.sigmoid(size);
-          confidence = tf.sigmoid(confidence);
-        }
 
         angle = angle.mul(PI);
 
@@ -127,7 +122,7 @@ export class Model {
       }
 
       const x = parseBox(xs);
-      const y = parseBox(ys, true);
+      const y = parseBox(ys);
 
       // Find intersection
       const intersection = {
