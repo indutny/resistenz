@@ -172,8 +172,8 @@ export class Input {
 
       const cx = scaledRect.cx * GRID_SIZE - gridX;
       const cy = scaledRect.cy * GRID_SIZE - gridY;
-      assert(0 <= cx && cx <= 1, '`cx` out of bounds');
-      assert(0 <= cy && cy <= 1, '`cy` out of bounds');
+      assert(0 <= cx && cx <= 1, `'cx' out of bounds: ${cx}`);
+      assert(0 <= cy && cy <= 1, `'cy' out of bounds: ${cy}`);
 
       grid[gridOff + 0] = cx;
       grid[gridOff + 1] = cy;
