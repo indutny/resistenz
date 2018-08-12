@@ -82,7 +82,7 @@ export class Model {
       optimizer: tf.train.adam(LR),
     });
 
-    console.log(model.summary());
+    model.summary();
 
     this.model = model;
   }
