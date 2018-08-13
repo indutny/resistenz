@@ -22,8 +22,8 @@ async function train() {
   let trainSrc = inputs.slice(validationCount);
 
   // Multiply train dataset
-  trainSrc.concat(trainSrc);
-  trainSrc.concat(trainSrc);
+  trainSrc = trainSrc.concat(trainSrc);
+  trainSrc = trainSrc.concat(trainSrc);
 
   // TODO(indutny): proper validation
   const validateSrc = inputs.slice(0, Math.min(1, validationCount))
@@ -75,7 +75,7 @@ async function train() {
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
 
-  console.log('Randomizing training data...');
+  console.log('Randomizing training data... [%d]', trainSrc.length);
   let ts = Date.now();
 
   const trainInputs = trainSrc.map((input) => input.randomize());
