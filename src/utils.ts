@@ -99,5 +99,13 @@ export function polygonToRect(polygon: Polygon): IOrientedRect {
     height = t;
   }
 
+  // And is less than 45 degrees
+  if (angle >= Math.PI / 4) {
+    angle = Math.PI / 2 - angle;
+    const t = width;
+    width = height;
+    height = t;
+  }
+
   return { cx, cy, width, height, angle };
 }

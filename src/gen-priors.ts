@@ -1,56 +1,45 @@
-import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-node';
+import { promisify } from 'util';
 
 import { load } from './dataset';
 import { TARGET_WIDTH, TARGET_HEIGHT } from './input';
 import { IOrientedRect } from './utils';
 import { GRID_DEPTH } from './model';
 
+const kmeans = require('node-kmeans');
+
 const LR = 0.001;
+const RANDOM_COUNT = 2;
 
 async function generate() {
   const inputs = await load();
 
   const rects: IOrientedRect[] = [];
+  let counter = 0;
   for (const input of inputs) {
-    for (const rect of input.resize().computeRects()) {
-      rects.push(rect);
+    console.error('image: %d', counter++);
+    for (let i = 0; i < RANDOM_COUNT; i++) {
+      for (const rect of input.randomize().computeRects()) {
+        rects.push(rect);
+      }
+      process.stderr.write('.');
     }
+    process.stderr.write('\n');
   }
 
-  const sizesSrc = new Float32Array(rects.length * 2);
-  let off = 0;
+  const points = [];
   for (const rect of rects) {
-    sizesSrc[off++] = rect.width / TARGET_WIDTH;
-    sizesSrc[off++] = rect.height / TARGET_HEIGHT;
+    const width = rect.width / TARGET_WIDTH;
+    const height = rect.height / TARGET_HEIGHT;
+
+    points.push([ width, height ]);
   }
 
-  const centers = tf.variable(tf.randomUniform([ GRID_DEPTH, 2 ]),
-    true, 'points');
+  const clusterize = promisify(kmeans.clusterize);
+  const res =await clusterize.call(kmeans, points, { k: GRID_DEPTH });
 
-  const optimizer = tf.train.sgd(LR);
+  const centers = res.map((obj: any) => obj.centroid);
 
-  for (let i = 0; i < 10000; i++) {
-    const lossValue = optimizer.minimize(() => {
-      const sizes =
-          tf.tensor2d(sizesSrc, [ rects.length, 2 ]).expandDims(1);
-      const expandedCenters = centers.expandDims(0);
-
-      const distances = sizes.sub(expandedCenters).square().sum(-1);
-
-      const argMin = distances.argMin(-1).flatten();
-      const oneHot = tf.oneHot(argMin, GRID_DEPTH).cast('float32')
-          .reshape(distances.shape);
-
-      return distances.mul(oneHot).sum(-1).mean() as tf.Scalar;
-    }, true, [ centers ]);
-    if (lossValue) {
-      lossValue.print();
-      lossValue.dispose();
-    }
-  }
-
-  centers.print();
+  console.log(centers);
 }
 
 generate().catch((e) => {

@@ -33,7 +33,34 @@ export class Model {
       activation: 'linear',
     }));
 
-    model.add(new MobileNetLayer(mobilenet));
+    // model.add(new MobileNetLayer(mobilenet));
+
+    function convPool(kernel: number, filters: number, pool: number,
+                      stride: number) {
+      model.add(tf.layers.conv2d({
+        kernelSize: kernel,
+        filters,
+        padding: 'same',
+      }));
+
+      model.add(tf.layers.activation({ activation: 'relu' }));
+
+      model.add(tf.layers.batchNormalization({}));
+
+      model.add(tf.layers.maxPooling2d({
+        poolSize: [ pool, pool ],
+        strides: [ stride, stride ],
+        padding: 'same',
+      }));
+    }
+
+    // TinyYOLO v3 (more or less)
+    convPool(3, 16, 2, 2);
+    convPool(3, 32, 2, 2);
+    convPool(3, 64, 2, 2);
+    convPool(3, 128, 2, 2);
+    convPool(3, 256, 2, 2);
+    convPool(3, 512, 2, 1);
 
     function convBN(kernel: number, filters: number,
                     activation: string = 'relu') {
@@ -47,6 +74,7 @@ export class Model {
       model.add(tf.layers.activation({ activation }));
     }
 
+    // Detection layer
     convBN(1, 256);
     convBN(3, 512);
     convBN(1, GRID_DEPTH * GRID_CHANNELS, 'linear');

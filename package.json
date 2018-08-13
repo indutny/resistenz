@@ -13,6 +13,7 @@
     "@tensorflow/tfjs": "^0.12.4",
     "@tensorflow/tfjs-node": "^0.1.11",
     "jimp": "^0.3.2",
+    "node-kmeans": "^1.1.8",
     "typescript": "^3.0.1"
   },
   "devDependencies": {
