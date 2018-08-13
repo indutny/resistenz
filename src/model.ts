@@ -14,12 +14,11 @@ const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-4;
+const LR = 1e-5;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
 const EPSILON = tf.scalar(1e-23);
-const ANGLE_EPSILON = tf.scalar(1e-3);
 const PI = tf.scalar(Math.PI);
 
 export class Model {
@@ -130,8 +129,8 @@ export class Model {
       const iou = interArea.div(unionArea.add(EPSILON));
 
       // Multiply by angle difference
-      const angleDiffMul = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
-      const angleIOU = iou.mul(angleDiffMul);
+      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
+      const angleIOU = iou.mul(angleDiff);
 
       // Mask out maximum angleIOU in each grid group
       const argMax = angleIOU.argMax(-1).flatten();
@@ -159,9 +158,7 @@ export class Model {
       const sizeLoss = tf.squaredDifference(
           x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
-      const angleDiff = x.box.angle.sub(y.box.angle);
-      const angleLoss = tf.sin(angleDiff).abs()
-          .div(tf.cos(angleDiff).abs().add(ANGLE_EPSILON));
+      const angleLoss = tf.sin(x.box.angle.sub(y.box.angle)).square();
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
