@@ -58,6 +58,19 @@ async function train() {
   const validationData =
     tensorify(validateSrc.map((input) => input.toTrainingPair()));
 
+  async function predict(file: string, input: Input,
+                         image: tf.Tensor, grid: tf.Tensor) {
+    const prediction = await (m.model.predict(image) as tf.Tensor).data();
+
+    let rects = input.predictionToRects(prediction, GRID_DEPTH, 0.2);
+    let svg = await input.toSVG(rects);
+    fs.writeFileSync(path.join(IMAGE_DIR, `${file}.svg`), svg);
+
+    rects = input.predictionToRects(await grid.data(), GRID_DEPTH);
+    svg = await input.toSVG(rects);
+    fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
+  }
+
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 25) {
     console.log('Randomizing training data...');
@@ -84,6 +97,15 @@ async function train() {
           onEpochEnd: async (epoch, logs) => {
             process.stdout.write('\n');
             console.log('epoch %d end %j', epoch, logs);
+
+            const test = tensorify([ trainInputs[0].toTrainingPair() ]);
+            await predict('train', trainInputs[0], test.image, test.targetGrid);
+            await predict('validate', validateSrc[0],
+              validationData.image, validationData.targetGrid);
+
+            // Clean-up memory?
+            tf.dispose(test);
+            tf.dispose(trainingData);
           },
         },
       });
@@ -91,29 +113,6 @@ async function train() {
 
     console.log('metrics %j', history.history);
     console.log('memory %j', tf.memory());
-
-    async function predict(file: string, input: Input,
-                           image: tf.Tensor, grid: tf.Tensor) {
-      const prediction = await (m.model.predict(image) as tf.Tensor).data();
-
-      let rects = input.predictionToRects(prediction, GRID_DEPTH, 0.2);
-      let svg = await input.toSVG(rects);
-      fs.writeFileSync(path.join(IMAGE_DIR, `${file}.svg`), svg);
-
-      rects = input.predictionToRects(await grid.data(), GRID_DEPTH);
-      svg = await input.toSVG(rects);
-      fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
-    }
-
-    const test = tensorify([ trainInputs[0].toTrainingPair() ]);
-    await predict('train', trainInputs[0], test.image, test.targetGrid);
-    await predict('validate', validateSrc[0],
-      validationData.image, validationData.targetGrid);
-
-    // Clean-up memory?
-    tf.dispose(test);
-    tf.dispose(trainingData);
-
     await m.model.save(`file://${SAVE_FILE}`);
   }
 }

@@ -51,19 +51,23 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   return await Promise.all(files.map(async (file) => {
     const image = await jimp.read(path.join(IMAGE_DIR, file));
 
+    const originalWidth = image.bitmap.width;
+    const originalHeight = image.bitmap.height;
+
     // Reduce processing time (and memory usage)
     image.scaleToFit(2 * TARGET_WIDTH, 2 * TARGET_HEIGHT,
         jimp.RESIZE_NEAREST_NEIGHBOR);
 
-    const height = image.bitmap.height;
+    const scaleX = image.bitmap.width / originalWidth;
+    const scaleY = image.bitmap.height / originalHeight;
 
     const geos = globalGeos.get(file)!.map((geo) => {
       return geo.map((point) => {
         // The points have inverted y axis in the data :(
         // (A https://www.labelbox.com/ quirk)
         return {
-          x: point.x,
-          y: height - point.y,
+          x: point.x * scaleX,
+          y: (originalHeight - point.y) * scaleY,
         };
       });
     });
