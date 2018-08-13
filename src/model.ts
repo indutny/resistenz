@@ -126,7 +126,7 @@ export class Model {
       // NOTE: (cos x - cos y)^2 + (sin x - sin y)^2 = 2 (1 - cos (x - y))
       const angleLoss = tf.squaredDifference(x.box.angle, y.box.angle).sum(-1)
           .div(tf.scalar(2));
-      const angleMul = tf.scalar(1).sub(angleLoss));
+      const angleMul = tf.scalar(1).sub(angleLoss);
       const angleIOU = iou.mul(angleMul);
 
       // Mask out maximum angleIOU in each grid group
