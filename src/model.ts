@@ -43,9 +43,9 @@ export class Model {
         padding: 'same',
       }));
 
-      model.add(tf.layers.activation({ activation: 'relu' }));
-
       model.add(tf.layers.batchNormalization({}));
+
+      model.add(tf.layers.activation({ activation: 'relu' }));
 
       model.add(tf.layers.maxPooling2d({
         poolSize: [ pool, pool ],
