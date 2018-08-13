@@ -8,7 +8,7 @@ import {
 import { Output } from './layers/output';
 import { MobileNetLayer } from './layers/mobilenet';
 
-export const GRID_DEPTH = 5;
+export const GRID_DEPTH = 10;
 
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
@@ -35,24 +35,19 @@ export class Model {
 
     model.add(new MobileNetLayer(mobilenet));
 
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 256,
-      activation: 'relu',
-      padding: 'same',
-    }));
+    function convBN(kernel: number, filters: number) {
+      model.add(tf.layers.conv2d({
+        kernelSize: kernel,
+        filters,
+        padding: 'same',
+      }));
 
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 512,
-      activation: 'relu',
-      padding: 'same',
-    }));
+      model.add(tf.layers.batchNormalization({}));
+      model.add(tf.layers.activation({ activation: 'relu' }));
+    }
 
-    model.add(tf.layers.conv2d({
-      kernelSize: 1,
-      filters: GRID_CHANNELS * GRID_DEPTH,
-    }));
+    convBN(1, 256);
+    convBN(3, 512);
 
     model.add(tf.layers.reshape({
       targetShape: [ GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS ]
