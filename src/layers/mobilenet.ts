@@ -24,6 +24,10 @@ export class MobileNetLayer extends tf.layers.Layer {
     return this.net.predict(inputs);
   }
 
+  public get trainableWeights() {
+    return this.net.trainableWeights;
+  }
+
   public computeOutputShape(inputShape: tf.Shape|tf.Shape[]) {
     return this.net.outputs[0].shape;
   }
