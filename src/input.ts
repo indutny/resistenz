@@ -16,7 +16,7 @@ const MAX_CROP_PERCENT = 0.05;
 const MAX_BRIGHTNESS = 0.2;
 const MAX_CONTRAST = 0.2;
 const MAX_HUE = 15;
-const MAX_ROTATE = 14.4;
+const MAX_ROTATE = 0;
 
 export interface ITrainingPair {
   readonly rgb: Float32Array;
