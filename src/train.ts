@@ -105,7 +105,6 @@ async function train() {
 
             // Clean-up memory?
             tf.dispose(test);
-            tf.dispose(trainingData);
           },
         },
       });
@@ -114,6 +113,8 @@ async function train() {
     console.log('metrics %j', history.history);
     console.log('memory %j', tf.memory());
     await m.model.save(`file://${SAVE_FILE}`);
+
+    tf.dispose(trainingData);
   }
 }
 
