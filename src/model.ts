@@ -14,7 +14,7 @@ const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-3;
+const LR = 1e-2;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -33,7 +33,7 @@ export class Model {
       activation: 'linear',
     }));
 
-    model.add(new MobileNetLayer(mobilenet));
+    // model.add(new MobileNetLayer(mobilenet));
 
     function convPool(kernel: number, filters: number, pool: number,
                       stride: number) {
@@ -55,14 +55,12 @@ export class Model {
     }
 
     // TinyYOLO v3 (more or less)
-    /*
     convPool(3, 16, 2, 2);
     convPool(3, 32, 2, 2);
     convPool(3, 64, 2, 2);
     convPool(3, 128, 2, 2);
     convPool(3, 256, 2, 2);
     convPool(3, 512, 2, 1);
-     */
 
     function convBN(kernel: number, filters: number,
                     activation: string = 'relu') {
@@ -175,7 +173,7 @@ export class Model {
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = y.confidence.square()
-          .mul(noObject).mean(-1)
+          .mul(noObject).sum(-1)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
       const centerLoss =
