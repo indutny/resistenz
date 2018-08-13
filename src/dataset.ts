@@ -76,6 +76,7 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   }));
 }
 
+/*
 load().then(async (inputs) => {
   const random = inputs[0].randomize();
 
@@ -87,3 +88,4 @@ load().then(async (inputs) => {
   svg = await random.toSVG(random.predictionToRects(grid, 1));
   fs.writeFileSync('/tmp/2.svg', svg);
 });
+*/

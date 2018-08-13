@@ -33,7 +33,7 @@ export class Model {
       activation: 'linear',
     }));
 
-    // model.add(new MobileNetLayer(mobilenet));
+    model.add(new MobileNetLayer(mobilenet));
 
     function convPool(kernel: number, filters: number, pool: number,
                       stride: number) {
@@ -55,12 +55,14 @@ export class Model {
     }
 
     // TinyYOLO v3 (more or less)
+    /*
     convPool(3, 16, 2, 2);
     convPool(3, 32, 2, 2);
     convPool(3, 64, 2, 2);
     convPool(3, 128, 2, 2);
     convPool(3, 256, 2, 2);
     convPool(3, 512, 2, 1);
+     */
 
     function convBN(kernel: number, filters: number,
                     activation: string = 'relu') {
