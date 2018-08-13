@@ -35,7 +35,7 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   });
 
   const dir = await util.promisify(fs.readdir)(IMAGE_DIR);
-  let files = dir.filter((file) => globalGeos.has(file));
+  let files = dir.filter((file) => globalGeos.has(file)).slice(26, 27);
 
   // Stupid, but stable sort
   files = files.map((file) => {
@@ -76,7 +76,6 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   }));
 }
 
-/*
 load().then(async (inputs) => {
   const random = inputs[0].randomize();
 
@@ -88,4 +87,3 @@ load().then(async (inputs) => {
   svg = await random.toSVG(random.predictionToRects(grid, 1));
   fs.writeFileSync('/tmp/2.svg', svg);
 });
-*/
