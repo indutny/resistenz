@@ -11,7 +11,12 @@ export const GRID_SIZE = 13;
 export const GRID_CHANNELS = 6;
 
 // Max amount of crop from each side
-const MAX_CROP_PERCENT = 0.1;
+const MAX_CROP_PERCENT = 0.05;
+
+const MAX_BRIGHTNESS = 0.1;
+const MAX_CONTRAST = 0.1;
+const MAX_HUE = 10;
+const MAX_ROTATE = 10;
 
 export interface ITrainingPair {
   readonly rgb: Float32Array;
@@ -43,7 +48,7 @@ export class Input {
     // TODO(indutny): add noise?
 
     // Randomly rotate by 90, 180, or 270 deg
-    const angleDeg = ((this.random() * 4) | 0) * 90;
+    const angleDeg = (this.random() - 0.5) * 2 * MAX_ROTATE;
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
     clone.rotate(-angleDeg, false);
@@ -77,10 +82,10 @@ export class Input {
 
     // Preserve x-y scale
     if (cropW > cropH) {
-      cropX += this.random() * (cropW - cropH);
+      cropX += (cropW - cropH) / 2;
       cropW = cropH;
     } else {
-      cropY += this.random() * (cropH - cropW);
+      cropY += (cropH - cropW) / 2;
       cropH = cropW;
     }
 
@@ -105,8 +110,11 @@ export class Input {
       });
     });
 
-    // Normalize image
-    clone.normalize();
+    clone.brightness((this.random() - 0.5) * 2 * MAX_BRIGHTNESS);
+    clone.contrast((this.random() - 0.5) * 2 * MAX_CONTRAST);
+    clone.color([
+      { apply: 'hue', params: [ (this.random() - 0.5) * 2 * MAX_HUE ] },
+    ]);
 
     // Return new network input
     return new Input(clone, polys).resize();
@@ -118,7 +126,7 @@ export class Input {
 
     const scaleX = TARGET_WIDTH / clone.bitmap.width;
     const scaleY = TARGET_HEIGHT / clone.bitmap.height;
-    clone.resize(TARGET_WIDTH, TARGET_HEIGHT);
+    clone.resize(TARGET_WIDTH, TARGET_HEIGHT, jimp.RESIZE_NEAREST_NEIGHBOR);
 
     polys = polys.map((points) => {
       return points.map((p) => {
@@ -140,9 +148,9 @@ export class Input {
     const rgb = new Float32Array(
         bitmap.width * bitmap.height * TARGET_CHANNELS);
     for (let i = 0, j = 0; i < bitmap.data.length; i += 4, j += 3) {
-      rgb[j + 0] = bitmap.data[i + 0] / 0xff;
-      rgb[j + 1] = bitmap.data[i + 1] / 0xff;
-      rgb[j + 2] = bitmap.data[i + 2] / 0xff;
+      rgb[j + 0] = (bitmap.data[i + 0] / 0xff) * 2 - 1;
+      rgb[j + 1] = (bitmap.data[i + 1] / 0xff) * 2 - 1;
+      rgb[j + 2] = (bitmap.data[i + 2] / 0xff) * 2 - 1;
     }
 
     const rects = this.computeRects();

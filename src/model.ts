@@ -50,7 +50,7 @@ export class Model {
       }));
     }
 
-    // TinyYOLO
+    // TinyYOLO v3 (more or less)
     convPool(3, 16, 2, 2);
     convPool(3, 32, 2, 2);
     convPool(3, 64, 2, 2);
@@ -58,14 +58,26 @@ export class Model {
     convPool(3, 256, 2, 2);
     convPool(3, 512, 2, 1);
 
-    for (let i = 0; i < 2; i++) {
-      model.add(tf.layers.conv2d({
-        kernelSize: 3,
-        filters: 1024,
-        activation: 'relu',
-        padding: 'same',
-      }));
-    }
+    model.add(tf.layers.conv2d({
+      kernelSize: 3,
+      filters: 1024,
+      activation: 'relu',
+      padding: 'same',
+    }));
+
+    model.add(tf.layers.conv2d({
+      kernelSize: 3,
+      filters: 256,
+      activation: 'relu',
+      padding: 'same',
+    }));
+
+    model.add(tf.layers.conv2d({
+      kernelSize: 3,
+      filters: 512,
+      activation: 'relu',
+      padding: 'same',
+    }));
 
     model.add(tf.layers.conv2d({
       kernelSize: 1,

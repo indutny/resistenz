@@ -5,7 +5,7 @@ import '@tensorflow/tfjs-node';
 
 import { load } from './dataset';
 import {
-  ITrainingPair, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS,
+  Input, ITrainingPair, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS,
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 import { Model, GRID_DEPTH } from './model';
@@ -18,7 +18,8 @@ async function train() {
   const m = new Model();
   const inputs = await load();
 
-  const validationCount = Math.floor(inputs.length * 0.1);
+  // TODO(indutny): proper validation
+  const validationCount = inputs.length === 1 ? 0 : 1;
   const trainSrc = inputs.slice(validationCount);
 
   const validateSrc = inputs.slice(0, validationCount)
@@ -58,7 +59,7 @@ async function train() {
     tensorify(validateSrc.map((input) => input.toTrainingPair()));
 
   console.log('Running fit');
-  for (let epoch = 1; epoch < 1000000; epoch += 50) {
+  for (let epoch = 1; epoch < 1000000; epoch += 25) {
     console.log('Randomizing training data...');
     let ts = Date.now();
 
@@ -75,7 +76,7 @@ async function train() {
       {
         initialEpoch: epoch,
         batchSize: 16,
-        epochs: epoch + 50,
+        epochs: epoch + 25,
         callbacks: {
           onEpochEnd: async (epoch, logs) => {
             console.log('epoch %d end %j', epoch, logs);
@@ -87,16 +88,23 @@ async function train() {
     console.log('metrics %j', history.history);
     console.log('memory %j', tf.memory());
 
+    async function predict(file: string, input: Input,
+                           image: tf.Tensor, grid: tf.Tensor) {
+      const prediction = await (m.model.predict(image) as tf.Tensor).data();
+
+      let rects = input.predictionToRects(prediction, GRID_DEPTH, 0.2);
+      let svg = await input.toSVG(rects);
+      fs.writeFileSync(path.join(IMAGE_DIR, `${file}.svg`), svg);
+
+      rects = input.predictionToRects(await grid.data(), GRID_DEPTH);
+      svg = await input.toSVG(rects);
+      fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
+    }
+
     const test = tensorify([ trainInputs[0].toTrainingPair() ]);
-    const prediction = await (m.model.predict(test.image) as tf.Tensor).data();
-
-    let rects = trainInputs[0].predictionToRects(prediction, GRID_DEPTH, 0.2);
-    let svg = await trainInputs[0].toSVG(rects);
-    fs.writeFileSync(path.join(IMAGE_DIR, 'train.svg'), svg);
-
-    rects = trainInputs[0].predictionToRects(await test.targetGrid.data(), GRID_DEPTH);
-    svg = await trainInputs[0].toSVG(rects);
-    fs.writeFileSync(path.join(IMAGE_DIR, 'train_ground.svg'), svg);
+    await predict('train', trainInputs[0], test.image, test.targetGrid);
+    await predict('validate', validateSrc[0],
+      validationData.image, validationData.targetGrid);
 
     // Clean-up memory?
     tf.dispose(test);
