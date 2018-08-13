@@ -6,7 +6,7 @@ import * as util from 'util';
 import jimp = require('jimp');
 
 import { Polygon, IPoint, IOrientedRect } from './utils';
-import { Input } from './input';
+import { Input, TARGET_WIDTH, TARGET_HEIGHT } from './input';
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const LABELS = path.join(DATASET_DIR, 'labels.json');
@@ -35,7 +35,7 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   });
 
   const dir = await util.promisify(fs.readdir)(IMAGE_DIR);
-  let files = dir.filter((file) => globalGeos.has(file)).slice(32, 40);
+  let files = dir.filter((file) => globalGeos.has(file));
 
   // Stupid, but stable sort
   files = files.map((file) => {
@@ -51,7 +51,10 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   return await Promise.all(files.map(async (file) => {
     const image = await jimp.read(path.join(IMAGE_DIR, file));
 
-    const width = image.bitmap.width;
+    // Reduce processing time (and memory usage)
+    image.scaleToFit(2 * TARGET_WIDTH, 2 * TARGET_HEIGHT,
+        jimp.RESIZE_NEAREST_NEIGHBOR);
+
     const height = image.bitmap.height;
 
     const geos = globalGeos.get(file)!.map((geo) => {

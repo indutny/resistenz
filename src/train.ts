@@ -18,11 +18,11 @@ async function train() {
   const m = new Model();
   const inputs = await load();
 
-  // TODO(indutny): proper validation
-  const validationCount = inputs.length === 1 ? 0 : 1;
+  const validationCount = (inputs.length * 0.1) | 0;
   const trainSrc = inputs.slice(validationCount);
 
-  const validateSrc = inputs.slice(0, validationCount)
+  // TODO(indutny): proper validation
+  const validateSrc = inputs.slice(0, Math.min(1, validationCount))
     .map((val) => val.resize());
 
   function tensorify(pairs: ReadonlyArray<ITrainingPair>) {
@@ -75,10 +75,14 @@ async function train() {
       trainingData.targetGrid,
       {
         initialEpoch: epoch,
-        batchSize: 16,
+        batchSize: 8,
         epochs: epoch + 25,
         callbacks: {
+          onBatchEnd: async () => {
+            process.stdout.write('.');
+          },
           onEpochEnd: async (epoch, logs) => {
+            process.stdout.write('\n');
             console.log('epoch %d end %j', epoch, logs);
           },
         },
