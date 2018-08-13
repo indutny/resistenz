@@ -14,7 +14,7 @@ const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 const LAMBDA_ANGLE = 5;
 
-const LR = 1e-5;
+const LR = 1e-4;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 

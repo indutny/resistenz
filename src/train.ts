@@ -101,8 +101,11 @@ async function train() {
             console.log('epoch %d end %j', epoch, logs);
 
             await predict('train', trainInputs[0], test.image, test.targetGrid);
-            await predict('validate', validateSrc[0],
-              validationData.image, validationData.targetGrid);
+
+            if (validateSrc.length === 1) {
+              await predict('validate', validateSrc[0],
+                validationData.image, validationData.targetGrid);
+            }
           },
         },
       });
