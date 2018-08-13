@@ -4,10 +4,10 @@ import jimp = require('jimp');
 
 import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
 
-export const TARGET_WIDTH = 224;
+export const TARGET_WIDTH = 416;
 export const TARGET_HEIGHT = TARGET_WIDTH;
 export const TARGET_CHANNELS = 3;
-export const GRID_SIZE = 7;
+export const GRID_SIZE = 13;
 export const GRID_CHANNELS = 7;
 
 // Max amount of crop from each side
