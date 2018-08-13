@@ -8,13 +8,13 @@ import {
 import { Output } from './layers/output';
 import { MobileNetLayer } from './layers/mobilenet';
 
-export const GRID_DEPTH = 10;
+export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-4;
+const LR = 1e-3;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
