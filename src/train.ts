@@ -19,7 +19,11 @@ async function train() {
   const inputs = await load();
 
   const validationCount = (inputs.length * 0.1) | 0;
-  const trainSrc = inputs.slice(validationCount);
+  let trainSrc = inputs.slice(validationCount);
+
+  // Multiply train dataset
+  trainSrc.concat(trainSrc);
+  trainSrc.concat(trainSrc);
 
   // TODO(indutny): proper validation
   const validateSrc = inputs.slice(0, Math.min(1, validationCount))
@@ -90,7 +94,7 @@ async function train() {
       trainingData.targetGrid,
       {
         initialEpoch: epoch,
-        batchSize: 8,
+        batchSize: 10,
         epochs: epoch + 25,
         callbacks: {
           onBatchEnd: async () => {

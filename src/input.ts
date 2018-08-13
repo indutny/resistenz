@@ -48,7 +48,8 @@ export class Input {
     // TODO(indutny): add noise?
 
     // Randomly rotate by 90, 180, or 270 deg
-    const angleDeg = (this.random() - 0.5) * 2 * MAX_ROTATE;
+    // const angleDeg = (this.random() - 0.5) * 2 * MAX_ROTATE;
+    const angleDeg = 0;
     const angleRad = angleDeg * Math.PI / 180;
     clone.background(0xffffffff);
     clone.rotate(-angleDeg, false);
