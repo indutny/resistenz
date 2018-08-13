@@ -7,7 +7,6 @@ export class Output extends tf.layers.Layer {
     if (Array.isArray(inputs)) {
       inputs = inputs[0];
     }
-    this.invokeCallHook(inputs, kwargs);
     const [ center, size, angle, confidence ] =
         tf.split(inputs, [ 2, 2, 1, 1 ], -1);
 

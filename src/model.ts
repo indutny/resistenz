@@ -6,6 +6,7 @@ import {
 } from './input';
 
 import { Output } from './layers/output';
+import { MobileNetLayer } from './layers/mobilenet';
 
 export const GRID_DEPTH = 5;
 
@@ -14,7 +15,7 @@ const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 const LAMBDA_ANGLE = 5;
 
-const LR = 1e-4;
+const LR = 1e-5;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -24,7 +25,7 @@ const PI = tf.scalar(Math.PI);
 export class Model {
   public readonly model: tf.Sequential;
 
-  constructor() {
+  constructor(mobilenet: tf.Model) {
     const model = tf.sequential();
 
     // Just a no-op to specify input layer shape
@@ -33,39 +34,7 @@ export class Model {
       activation: 'linear',
     }));
 
-    function convPool(kernel: number, filters: number, pool: number,
-                      stride: number) {
-      model.add(tf.layers.conv2d({
-        kernelSize: kernel,
-        filters,
-        padding: 'same',
-      }));
-
-      model.add(tf.layers.activation({ activation: 'relu' }));
-
-      model.add(tf.layers.batchNormalization({}));
-
-      model.add(tf.layers.maxPooling2d({
-        poolSize: [ pool, pool ],
-        strides: [ stride, stride ],
-        padding: 'same',
-      }));
-    }
-
-    // TinyYOLO v3 (more or less)
-    convPool(3, 16, 2, 2);
-    convPool(3, 32, 2, 2);
-    convPool(3, 64, 2, 2);
-    convPool(3, 128, 2, 2);
-    convPool(3, 256, 2, 2);
-    convPool(3, 512, 2, 1);
-
-    model.add(tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 1024,
-      activation: 'relu',
-      padding: 'same',
-    }));
+    model.add(new MobileNetLayer(mobilenet));
 
     model.add(tf.layers.conv2d({
       kernelSize: 3,

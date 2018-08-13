@@ -13,9 +13,13 @@ import { Model, GRID_DEPTH } from './model';
 const IMAGE_DIR = path.join(__dirname, '..', 'images');
 const SAVE_DIR = path.join(__dirname, '..', 'saves');
 const SAVE_FILE = path.join(SAVE_DIR, 'model');
+const MOBILE_NET =
+    path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
 async function train() {
-  const m = new Model();
+  const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
+
+  const m = new Model(mobilenet);
   const inputs = await load();
 
   const validationCount = (inputs.length * 0.1) | 0;
