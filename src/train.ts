@@ -16,6 +16,26 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
+const AUGMENT_MULTIPLY = 8;
+
+function augmentTrain(src: ReadonlyArray<Input>,
+                      list: Input[], minPercent: number): void {
+  const targetSize = src.length * AUGMENT_MULTIPLY;
+  const minCount = Math.max(targetSize - list.length, list.length * minPercent);
+
+  // Add random entries
+  for (let i = 0; i < minCount; i++) {
+    const index = (src.length * Math.random()) | 0;
+    list.push(src[index].randomize());
+  }
+
+  // Remove random entries
+  while (list.length > targetSize) {
+    const index = (list.length * Math.random()) | 0;
+    list.splice(index, 1);
+  }
+}
+
 async function train() {
   const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
 
@@ -23,11 +43,7 @@ async function train() {
   const inputs = await load();
 
   const validationCount = (inputs.length * 0.1) | 0;
-  let trainSrc = inputs.slice(validationCount);
-
-  // Multiply train dataset
-  trainSrc = trainSrc.concat(trainSrc);
-  trainSrc = trainSrc.concat(trainSrc);
+  const trainSrc = inputs.slice(validationCount);
 
   // TODO(indutny): proper validation
   const validateSrc = inputs.slice(0, Math.min(1, validationCount))
@@ -79,20 +95,29 @@ async function train() {
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
 
-  console.log('Randomizing training data... [%d]', trainSrc.length);
-  let ts = Date.now();
-
-  const trainInputs = trainSrc.map((input) => input.randomize());
-  const train = trainInputs.map((input) => input.toTrainingPair());
-  console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
-  const trainingData = tensorify(train);
-
-  const test = tensorify([ trainInputs[0].toTrainingPair() ]);
+  // Shared training data
+  const trainInputs: Input[] = [];
 
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 25) {
     console.log('Epoch %d', epoch);
-    ts = Date.now();
+
+    console.log('Randomizing training data... [%d]', trainSrc.length);
+    console.time('randomize');
+
+    augmentTrain(trainSrc, trainInputs, 0.5);
+
+    console.timeEnd('randomize');
+
+    console.log('Translating to tensors...');
+    console.time('translating');
+    const train = trainInputs.map((input) => input.toTrainingPair());
+    const trainingData = tensorify(train);
+
+    const test = tensorify([ trainInputs[0].toTrainingPair() ]);
+    console.timeEnd('translating');
+
+    console.time('fit');
     const history = await m.model.fit(
       trainingData.image,
       trainingData.targetGrid,
@@ -117,16 +142,16 @@ async function train() {
           },
         },
       });
-    console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
+    console.timeEnd('fit');
 
     console.log('metrics %j', history.history);
     console.log('memory %j', tf.memory());
     await m.model.save(`file://${SAVE_FILE}`);
-  }
 
-  // Clean-up memory?
-  tf.dispose(test);
-  tf.dispose(trainingData);
+    // Clean-up memory?
+    tf.dispose(test);
+    tf.dispose(trainingData);
+  }
 }
 
 train().then(() => {

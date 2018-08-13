@@ -16,7 +16,7 @@ const MAX_CROP_PERCENT = 0.05;
 const MAX_BRIGHTNESS = 0.2;
 const MAX_CONTRAST = 0.2;
 const MAX_HUE = 15;
-const MAX_ROTATE = 0;
+const MAX_ROTATE = 5;
 
 export interface ITrainingPair {
   readonly rgb: Float32Array;
@@ -47,10 +47,11 @@ export class Input {
 
     // TODO(indutny): add noise?
 
-    // Randomly rotate by 90, 180, or 270 deg
-    const angleDeg = (this.random() - 0.5) * 2 * MAX_ROTATE;
+    // Randomly rotate by 90, 180, or 270 deg + small continuous degree
+    const angleDeg = (this.random() - 0.5) * 2 * MAX_ROTATE +
+        ((this.random() * 4) | 0) * 90;
     const angleRad = angleDeg * Math.PI / 180;
-    clone.background(0xffffffff);
+    clone.background(0x7f7f7fff);
     clone.rotate(-angleDeg, false);
 
     width = clone.bitmap.width;
