@@ -123,8 +123,11 @@ export class Model {
       const iou = interArea.div(unionArea.add(EPSILON));
 
       // Multiply by angle difference
-      const angleDiff = tf.squaredDifference(x.box.angle, y.box.angle).sum(-1);
-      const angleIOU = iou.mul(angleDiff);
+      // NOTE: (cos x - cos y)^2 + (sin x - sin y)^2 = 2 (1 - cos (x - y))
+      const angleLoss = tf.squaredDifference(x.box.angle, y.box.angle).sum(-1)
+          .div(tf.scalar(2));
+      const angleMul = tf.scalar(1).sub(angleLoss));
+      const angleIOU = iou.mul(angleMul);
 
       // Mask out maximum angleIOU in each grid group
       const argMax = angleIOU.argMax(-1).flatten();
@@ -152,7 +155,7 @@ export class Model {
       const sizeLoss = tf.squaredDifference(
           x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
-      const boxLoss = centerLoss.add(sizeLoss).add(angleDiff)
+      const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_IOU));
 
