@@ -48,6 +48,7 @@ export class Model {
 
     convBN(1, 256);
     convBN(3, 512);
+    convBN(1, GRID_DEPTH * GRID_CHANNELS);
 
     model.add(tf.layers.reshape({
       targetShape: [ GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS ]
