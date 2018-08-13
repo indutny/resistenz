@@ -130,8 +130,8 @@ export class Model {
       const iou = interArea.div(unionArea.add(EPSILON));
 
       // Multiply by angle difference
-      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
-      const angleIOU = iou.mul(angleDiff);
+      const angleDiffMul = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
+      const angleIOU = iou.mul(angleDiffMul);
 
       // Mask out maximum angleIOU in each grid group
       const argMax = angleIOU.argMax(-1).flatten();
