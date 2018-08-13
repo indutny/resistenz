@@ -8,7 +8,7 @@ export const TARGET_WIDTH = 224;
 export const TARGET_HEIGHT = TARGET_WIDTH;
 export const TARGET_CHANNELS = 3;
 export const GRID_SIZE = 7;
-export const GRID_CHANNELS = 6;
+export const GRID_CHANNELS = 7;
 
 // Max amount of crop from each side
 const MAX_CROP_PERCENT = 0.05;
@@ -174,7 +174,7 @@ export class Input {
       const gridOff = (gridY * GRID_SIZE + gridX) * GRID_CHANNELS;
 
       // Cell is busy
-      if (grid[gridOff + 5] !== 0) {
+      if (grid[gridOff + 6] !== 0) {
         continue;
       }
 
@@ -194,13 +194,17 @@ export class Input {
       grid[gridOff + 2] = width;
       grid[gridOff + 3] = height;
 
-      const angle = scaledRect.angle / Math.PI;
-      assert(0 <= angle && angle <= 1, '`angle` out of bounds');
+      const cos = Math.cos(scaledRect.angle);
+      const sin = Math.sin(scaledRect.angle);
 
-      grid[gridOff + 4] = angle;
+      // Only 1st quadrant
+      assert(0 <= cos && cos <= 1, `'cos' out of bounds: ${cos}`);
+      assert(0 <= sin && sin <= 1, `'sin' out of bounds: ${cos}`);
+      grid[gridOff + 4] = cos;
+      grid[gridOff + 5] = sin;
 
       // Confidence
-      grid[gridOff + 5] = 1;
+      grid[gridOff + 6] = 1;
     }
 
     return {
@@ -275,7 +279,7 @@ export class Input {
 
     const rects: IOrientedRect[] = [];
     for (let i = 0; i < prediction.length; i += GRID_CHANNELS) {
-      const confidence = prediction[i + 5];
+      const confidence = prediction[i + 6];
       if (confidence < threshold) {
         continue
       }
@@ -284,12 +288,15 @@ export class Input {
       const gridX = gridOff % GRID_SIZE;
       const gridY = (gridOff / GRID_SIZE) | 0;
 
+      const cos = prediction[i + 4];
+      const sin = prediction[i + 5];
+
       const rect: IColoredRect = {
         cx: (prediction[i + 0] + gridX) * bitmap.width / GRID_SIZE,
         cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
         width: (prediction[i + 2]) * bitmap.width,
         height: (prediction[i + 3]) * bitmap.height,
-        angle: prediction[i + 4] * Math.PI,
+        angle: Math.atan2(cos, sin),
 
         alpha: confidence,
       };

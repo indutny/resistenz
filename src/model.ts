@@ -8,7 +8,7 @@ import {
 import { Output } from './layers/output';
 import { MobileNetLayer } from './layers/mobilenet';
 
-export const GRID_DEPTH = 10;
+export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
@@ -72,12 +72,9 @@ export class Model {
       // shape == [ batch, grid_size, grid_size, grid_depth, grid_channels ]
       function parseBox(out: tf.Tensor) {
         let [ center, size, angle, confidence ] =
-            tf.split(out, [ 2, 2, 1, 1 ], -1);
+            tf.split(out, [ 2, 2, 2, 1 ], -1);
 
-        angle = tf.squeeze(angle, [ angle.rank - 1 ]);
         confidence = tf.squeeze(confidence, [ confidence.rank - 1 ]);
-
-        angle = angle.mul(PI);
 
         const box = {
           center,
@@ -126,7 +123,7 @@ export class Model {
       const iou = interArea.div(unionArea.add(EPSILON));
 
       // Multiply by angle difference
-      const angleDiff = tf.abs(tf.cos(x.box.angle.sub(y.box.angle)));
+      const angleDiff = tf.squaredDifference(x.box.angle, y.box.angle).sum(-1);
       const angleIOU = iou.mul(angleDiff);
 
       // Mask out maximum angleIOU in each grid group
@@ -155,9 +152,7 @@ export class Model {
       const sizeLoss = tf.squaredDifference(
           x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
-      const angleLoss = tf.sin(x.box.angle.sub(y.box.angle)).square();
-
-      const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
+      const boxLoss = centerLoss.add(sizeLoss).add(angleDiff)
           .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_IOU));
 

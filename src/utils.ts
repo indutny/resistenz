@@ -75,8 +75,8 @@ export function polygonToRect(polygon: Polygon): IOrientedRect {
 
   // width > height
   const disc = Math.sqrt(diag ** 4 - 4 * area ** 2);
-  const width = Math.sqrt((diag ** 2 + disc) / 2);
-  const height = Math.sqrt((diag ** 2 - disc) / 2);
+  let width = Math.sqrt((diag ** 2 + disc) / 2);
+  let height = Math.sqrt((diag ** 2 - disc) / 2);
 
   // find longest side
   const longest = [ v01, v03, v21, v23 ].map((vec) => {
@@ -89,6 +89,14 @@ export function polygonToRect(polygon: Polygon): IOrientedRect {
   let angle = Math.atan2(longest.y, longest.x);
   if (angle < 0) {
     angle += Math.PI;
+  }
+
+  // Ensure that angle is always in 1st quadrant
+  if (angle >= Math.PI / 2) {
+    angle -= Math.PI / 2;
+    const t = width;
+    width = height;
+    height = t;
   }
 
   return { cx, cy, width, height, angle };
