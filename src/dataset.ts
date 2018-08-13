@@ -75,3 +75,17 @@ export async function load(): Promise<ReadonlyArray<Input>> {
     return new Input(image, geos);
   }));
 }
+
+  /*
+load().then(async (inputs) => {
+  const random = inputs[0].randomize();
+
+  let svg = await random.toSVG();
+  fs.writeFileSync('/tmp/1.svg', svg);
+
+  const grid = random.toTrainingPair().grid;
+
+  svg = await random.toSVG(random.predictionToRects(grid, 1));
+  fs.writeFileSync('/tmp/2.svg', svg);
+});
+   */

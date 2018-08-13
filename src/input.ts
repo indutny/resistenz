@@ -296,7 +296,7 @@ export class Input {
         cy: (prediction[i + 1] + gridY) * bitmap.height / GRID_SIZE,
         width: (prediction[i + 2]) * bitmap.width,
         height: (prediction[i + 3]) * bitmap.height,
-        angle: Math.atan2(cos, sin),
+        angle: Math.atan2(sin, cos),
 
         alpha: confidence,
       };
