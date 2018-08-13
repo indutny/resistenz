@@ -11,7 +11,7 @@ export const GRID_SIZE = 7;
 export const GRID_CHANNELS = 7;
 
 // Max amount of crop from each side
-const MAX_CROP_PERCENT = 0.05;
+const MAX_CROP_PERCENT = 0.1;
 
 const MAX_BRIGHTNESS = 0.2;
 const MAX_CONTRAST = 0.2;
