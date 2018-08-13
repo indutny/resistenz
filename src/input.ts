@@ -199,7 +199,7 @@ export class Input {
 
       // Only 1st quadrant
       assert(0 <= cos && cos <= 1, `'cos' out of bounds: ${cos}`);
-      assert(0 <= sin && sin <= 1, `'sin' out of bounds: ${cos}`);
+      assert(0 <= sin && sin <= 1, `'sin' out of bounds: ${sin}`);
       grid[gridOff + 4] = cos;
       grid[gridOff + 5] = sin;
 
