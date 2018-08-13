@@ -71,18 +71,20 @@ async function train() {
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
 
+  console.log('Randomizing training data...');
+  let ts = Date.now();
+
+  const trainInputs = trainSrc.map((input) => input.randomize());
+  const train = trainInputs.map((input) => input.toTrainingPair());
+  console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
+  const trainingData = tensorify(train);
+
+  const test = tensorify([ trainInputs[0].toTrainingPair() ]);
+
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 25) {
-    console.log('Randomizing training data...');
-    let ts = Date.now();
-
-    const trainInputs = trainSrc.map((input) => input.randomize());
-    const train = trainInputs.map((input) => input.toTrainingPair());
-    console.log('Took %s sec', ((Date.now() - ts) / 1000).toFixed(2));
-
     console.log('Epoch %d', epoch);
     ts = Date.now();
-    const trainingData = tensorify(train);
     const history = await m.model.fit(
       trainingData.image,
       trainingData.targetGrid,
@@ -98,13 +100,9 @@ async function train() {
             process.stdout.write('\n');
             console.log('epoch %d end %j', epoch, logs);
 
-            const test = tensorify([ trainInputs[0].toTrainingPair() ]);
             await predict('train', trainInputs[0], test.image, test.targetGrid);
             await predict('validate', validateSrc[0],
               validationData.image, validationData.targetGrid);
-
-            // Clean-up memory?
-            tf.dispose(test);
           },
         },
       });
@@ -113,9 +111,11 @@ async function train() {
     console.log('metrics %j', history.history);
     console.log('memory %j', tf.memory());
     await m.model.save(`file://${SAVE_FILE}`);
-
-    tf.dispose(trainingData);
   }
+
+  // Clean-up memory?
+  tf.dispose(test);
+  tf.dispose(trainingData);
 }
 
 train().then(() => {

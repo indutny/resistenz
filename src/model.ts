@@ -15,6 +15,8 @@ const LAMBDA_IOU = 5;
 const LAMBDA_ANGLE = 5;
 
 const LR = 1e-5;
+const MOMENTUM = 0.9;
+const USE_NESTEROV = true;
 
 const EPSILON = tf.scalar(1e-23);
 const PI = tf.scalar(Math.PI);
@@ -92,7 +94,7 @@ export class Model {
 
     model.compile({
       loss: (xs, ys) => this.loss(xs, ys),
-      optimizer: tf.train.adam(LR),
+      optimizer: tf.train.momentum(LR, MOMENTUM, USE_NESTEROV),
     });
 
     model.summary();
