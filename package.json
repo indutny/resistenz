@@ -12,6 +12,7 @@
   "dependencies": {
     "@tensorflow/tfjs": "^0.12.4",
     "@tensorflow/tfjs-node": "^0.1.11",
+    "exif-parser": "^0.1.12",
     "jimp": "^0.3.2",
     "node-fetch": "^2.2.0",
     "node-kmeans": "^1.1.8",

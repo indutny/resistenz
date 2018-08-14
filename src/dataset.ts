@@ -2,42 +2,21 @@ import * as assert from 'assert';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as util from 'util';
+import { promisify } from 'util';
 import jimp = require('jimp');
 
 import { Polygon, IPoint, IOrientedRect } from './utils';
 import { Input, TARGET_WIDTH, TARGET_HEIGHT } from './input';
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
-const LABELS = path.join(DATASET_DIR, 'labels.json');
-const IMAGE_DIR = path.join(DATASET_DIR, 'resized');
+const IMAGE_DIR = path.join(DATASET_DIR, 'processed');
 
 export async function load(): Promise<ReadonlyArray<Input>> {
-  const json = await util.promisify(fs.readFile)(LABELS);
-  const globalGeos: Map<string, ReadonlyArray<Polygon>> = new Map();
+  const dir = await promisify(fs.readdir)(IMAGE_DIR);
 
-  JSON.parse(json.toString()).forEach((entry: any) => {
-    if (!entry || !entry.Label || !entry.Label.Resistor) {
-      return;
-    }
+  let files = dir.filter((file) => /\.json$/.test(file));
 
-    const geometry = entry.Label.Resistor.filter((entry: any) => {
-      return entry.geometry.length === 4;
-    });
-
-    if (geometry.length === 0) {
-      return;
-    }
-
-    globalGeos.set(entry['External ID'], geometry.map((entry: any) => {
-      return entry.geometry;
-    }));
-  });
-
-  const dir = await util.promisify(fs.readdir)(IMAGE_DIR);
-  let files = dir.filter((file) => globalGeos.has(file)).slice(28, 29);
-
-  // Stupid, but stable sort
+  // Stupid, but stable semi-random sort
   files = files.map((file) => {
     return {
       file,
@@ -48,37 +27,22 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   }).map((entry) => entry.file);
 
   console.log('Loading images...');
-  return await Promise.all(files.map(async (file) => {
-    const image = await jimp.read(path.join(IMAGE_DIR, file));
+  let done = 0;
+  return await Promise.all(files.map(async (labelsFile) => {
+    const imageFile = labelsFile.replace(/\.json$/, '') + '.jpg';
+    const image = await jimp.read(path.join(IMAGE_DIR, imageFile));
+    const rawLabels = await promisify(fs.readFile)(
+        path.join(IMAGE_DIR, labelsFile));
 
-    const originalWidth = image.bitmap.width;
-    const originalHeight = image.bitmap.height;
+    const labels = JSON.parse(rawLabels.toString());
 
-    // Reduce processing time (and memory usage)
-    image.scaleToFit(2 * TARGET_WIDTH, 2 * TARGET_HEIGHT,
-        jimp.RESIZE_NEAREST_NEIGHBOR);
-
-    const scaleX = image.bitmap.width / originalWidth;
-    const scaleY = image.bitmap.height / originalHeight;
-
-    const geos = globalGeos.get(file)!.map((geo) => {
-      return geo.map((point) => {
-        // The points have inverted y axis in the data :(
-        // (A https://www.labelbox.com/ quirk)
-        return {
-          x: point.x * scaleX,
-          y: (originalHeight - point.y) * scaleY,
-        };
-      });
-    });
-
-    return new Input(image, geos);
+    console.log(`${done++}/${files.length}`);
+    return new Input(image, labels.polygons);
   }));
 }
 
-/*
 load().then(async (inputs) => {
-  const random = inputs[0].randomize();
+  const random = inputs[0];
 
   let svg = await random.toSVG();
   fs.writeFileSync('/tmp/1.svg', svg);
@@ -88,4 +52,3 @@ load().then(async (inputs) => {
   svg = await random.toSVG(random.predictionToRects(grid, 1));
   fs.writeFileSync('/tmp/2.svg', svg);
 });
-*/
