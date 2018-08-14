@@ -14,7 +14,7 @@ const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-2;
+const LR = 1e-3;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -59,7 +59,8 @@ export class Model {
     convPool(3, 32, 2, 2);
     convPool(3, 64, 2, 2);
     convPool(3, 128, 2, 2);
-    convPool(3, 256, 2, 1);
+    convPool(3, 256, 2, 2);
+    convPool(3, 512, 2, 1);
 
     function convBN(kernel: number, filters: number,
                     activation: string = 'relu') {
@@ -74,8 +75,8 @@ export class Model {
     }
 
     // Detection layer
-    convBN(1, 128);
-    convBN(3, 256);
+    convBN(1, 256);
+    convBN(3, 512);
     convBN(1, GRID_DEPTH * GRID_CHANNELS, 'linear');
 
     model.add(tf.layers.reshape({
