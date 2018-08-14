@@ -36,6 +36,36 @@ function augmentTrain(src: ReadonlyArray<Input>,
   }
 }
 
+function tensorify(pairs: ReadonlyArray<ITrainingPair>) {
+  const xs = new Float32Array(
+    pairs.length * TARGET_WIDTH * TARGET_HEIGHT * TARGET_CHANNELS);
+  const ys = new Float32Array(
+    pairs.length * GRID_SIZE * GRID_SIZE * GRID_CHANNELS);
+
+  let offX = 0;
+  let offY = 0;
+  for (const pair of pairs) {
+    for (let i = 0; i < pair.rgb.length; i++) {
+      xs[offX++] = pair.rgb[i];
+    }
+    for (let i = 0; i < pair.grid.length; i++) {
+      ys[offY++] = pair.grid[i];
+    }
+  }
+
+  const image = tf.tensor(xs, [
+      pairs.length, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ]);
+
+  return {
+    image,
+    targetGrid: tf.tidy(() => {
+      const shallow = tf.tensor(ys, [
+          pairs.length, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS ]);
+      return shallow.tile([ 1, 1, 1, GRID_DEPTH, 1 ]);
+    }),
+  };
+}
+
 async function train() {
   const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
 
@@ -45,42 +75,15 @@ async function train() {
   const validationCount = (inputs.length * 0.1) | 0;
   const trainSrc = inputs.slice(validationCount);
 
-  // TODO(indutny): proper validation
-  const validateSrc = inputs.slice(0, Math.min(1, validationCount))
+  const validateSrc = inputs.slice(0, validationCount)
     .map((val) => val.resize());
 
-  function tensorify(pairs: ReadonlyArray<ITrainingPair>) {
-    const xs = new Float32Array(
-      pairs.length * TARGET_WIDTH * TARGET_HEIGHT * TARGET_CHANNELS);
-    const ys = new Float32Array(
-      pairs.length * GRID_SIZE * GRID_SIZE * GRID_CHANNELS);
-
-    let offX = 0;
-    let offY = 0;
-    for (const pair of pairs) {
-      for (let i = 0; i < pair.rgb.length; i++) {
-        xs[offX++] = pair.rgb[i];
-      }
-      for (let i = 0; i < pair.grid.length; i++) {
-        ys[offY++] = pair.grid[i];
-      }
-    }
-
-    const image = tf.tensor(xs, [
-        pairs.length, TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ]);
-
-    return {
-      image,
-      targetGrid: tf.tidy(() => {
-        const shallow = tf.tensor(ys, [
-            pairs.length, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS ]);
-        return shallow.tile([ 1, 1, 1, GRID_DEPTH, 1 ]);
-      }),
-    };
-  }
-
-  const validationData =
-    tensorify(validateSrc.map((input) => input.toTrainingPair()));
+  console.time('validation tensorify');
+  const validation = {
+    all: tensorify(validateSrc.map((input) => input.toTrainingPair())),
+    single: tensorify([ validateSrc[0].toTrainingPair() ]),
+  };
+  console.timeEnd('validation tensorify');
 
   async function predict(file: string, input: Input,
                          image: tf.Tensor, grid: tf.Tensor) {
@@ -105,26 +108,29 @@ async function train() {
     console.log('Randomizing training data... [%d]', trainSrc.length);
     console.time('randomize');
 
-    augmentTrain(trainSrc, trainInputs, 0.25);
+    augmentTrain(trainSrc, trainInputs, 0.5);
 
     console.timeEnd('randomize');
 
     console.log('Translating to tensors...');
-    console.time('translating');
+    console.time('tensorify');
     const train = trainInputs.map((input) => input.toTrainingPair());
-    const trainingData = tensorify(train);
+    const training = {
+      all: tensorify(train),
+      single: tensorify([ train[0] ]),
+    };
 
-    const test = tensorify([ trainInputs[0].toTrainingPair() ]);
-    console.timeEnd('translating');
+    console.timeEnd('tensorify');
 
     console.time('fit');
     const history = await m.model.fit(
-      trainingData.image,
-      trainingData.targetGrid,
+      training.all.image,
+      training.all.targetGrid,
       {
         initialEpoch: epoch,
         batchSize: 32,
         epochs: epoch + 25,
+        validationData: [ validation.all.image, validation.all.targetGrid ],
         callbacks: {
           onBatchEnd: async () => {
             process.stdout.write('.');
@@ -133,25 +139,29 @@ async function train() {
             process.stdout.write('\n');
             console.log('epoch %d end %j', epoch, logs);
 
-            await predict('train', trainInputs[0], test.image, test.targetGrid);
+            await predict('train', trainInputs[0], training.single.image,
+              training.single.targetGrid);
 
-            if (validateSrc.length === 1) {
+            if (validateSrc.length >= 1) {
               await predict('validate', validateSrc[0],
-                validationData.image, validationData.targetGrid);
+                validation.single.image, validation.single.targetGrid);
             }
           },
         },
       });
     console.timeEnd('fit');
 
-    console.log('metrics %j', history.history);
     console.log('memory %j', tf.memory());
     await m.model.save(`file://${SAVE_FILE}`);
 
     // Clean-up memory?
-    tf.dispose(test);
-    tf.dispose(trainingData);
+    tf.dispose(training.single);
+    tf.dispose(training.all);
   }
+
+  // Clean-up memory?
+  tf.dispose(validation.single);
+  tf.dispose(validation.all);
 }
 
 train().then(() => {
