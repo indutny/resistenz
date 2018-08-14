@@ -35,7 +35,7 @@ export async function load(): Promise<ReadonlyArray<Input>> {
   });
 
   const dir = await util.promisify(fs.readdir)(IMAGE_DIR);
-  let files = dir.filter((file) => globalGeos.has(file)).slice(50, 51);
+  let files = dir.filter((file) => globalGeos.has(file));
 
   // Stupid, but stable sort
   files = files.map((file) => {
