@@ -123,7 +123,7 @@ async function train() {
       trainingData.targetGrid,
       {
         initialEpoch: epoch,
-        batchSize: 10,
+        batchSize: 32,
         epochs: epoch + 25,
         callbacks: {
           onBatchEnd: async () => {
