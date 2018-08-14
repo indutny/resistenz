@@ -16,7 +16,7 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
-const AUGMENT_MULTIPLY = 8;
+const AUGMENT_MULTIPLY = 2;
 
 function augmentTrain(src: ReadonlyArray<Input>,
                       list: Input[], minPercent: number): void {
