@@ -81,7 +81,8 @@ async function train() {
   console.time('validation tensorify');
   const validation = {
     all: tensorify(validateSrc.map((input) => input.toTrainingPair())),
-    single: tensorify([ validateSrc[0].toTrainingPair() ]),
+    single: validateSrc.length ?
+      tensorify([ validateSrc[0].toTrainingPair() ]) : undefined,
   };
   console.timeEnd('validation tensorify');
 
@@ -130,7 +131,8 @@ async function train() {
         initialEpoch: epoch,
         batchSize: 32,
         epochs: epoch + 25,
-        validationData: [ validation.all.image, validation.all.targetGrid ],
+        validationData: validateSrc.length >= 1 ?
+          [ validation.all.image, validation.all.targetGrid ] : undefined,
         callbacks: {
           onBatchEnd: async () => {
             process.stdout.write('.');
@@ -144,7 +146,7 @@ async function train() {
 
             if (validateSrc.length >= 1) {
               await predict('validate', validateSrc[0],
-                validation.single.image, validation.single.targetGrid);
+                validation.single!.image, validation.single!.targetGrid);
             }
           },
         },
@@ -160,7 +162,9 @@ async function train() {
   }
 
   // Clean-up memory?
-  tf.dispose(validation.single);
+  if (validation.single) {
+    tf.dispose(validation.single);
+  }
   tf.dispose(validation.all);
 }
 
