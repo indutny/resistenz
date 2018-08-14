@@ -13,10 +13,11 @@ const PRIOR_SIZES = [
 
 export class Output extends tf.layers.Layer {
   public call(inputs: Tensor|Tensor[], kwargs: any): Tensor|Tensor[] {
-    if (Array.isArray(inputs)) {
-      inputs = inputs[0];
-    }
     return tf.tidy(() => {
+      if (Array.isArray(inputs)) {
+        inputs = inputs[0];
+      }
+
       const [ center, size, angle, confidence ] =
           tf.split(inputs, [ 2, 2, 2, 1 ], -1);
 
