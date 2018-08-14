@@ -2,7 +2,10 @@ import * as assert from 'assert';
 import { Buffer } from 'buffer';
 import jimp = require('jimp');
 
-import { Polygon, IPoint, IOrientedRect, polygonToRect, rotate } from './utils';
+import {
+  Polygon, IPoint, IOrientedRect, polygonToRect, rotate,
+  vector, norm
+} from './utils';
 
 export const TARGET_WIDTH = 224;
 export const TARGET_HEIGHT = TARGET_WIDTH;
@@ -156,6 +159,11 @@ export class Input {
 
     const rects = this.computeRects();
 
+    const cellCenter = {
+      x: 0.5 / GRID_SIZE,
+      y: 0.5 / GRID_SIZE,
+    };
+
     const grid = new Float32Array(GRID_SIZE * GRID_SIZE * GRID_CHANNELS);
     for (const rect of rects) {
       const scaledRect: IOrientedRect = {
@@ -174,13 +182,25 @@ export class Input {
 
       const gridOff = (gridY * GRID_SIZE + gridX) * GRID_CHANNELS;
 
-      // Cell is busy
-      if (grid[gridOff + 6] !== 0) {
-        continue;
-      }
-
       const cx = scaledRect.cx * GRID_SIZE - gridX;
       const cy = scaledRect.cy * GRID_SIZE - gridY;
+
+      // Cell is busy
+      if (grid[gridOff + 6] !== 0) {
+        const distance = {
+          present: norm(vector(cellCenter, {
+            x: grid[gridOff + 0],
+            y: grid[gridOff + 1],
+          })),
+          candidate: norm(vector(cellCenter, { x: cx, y: cy })),
+        };
+
+        // Contents of cell are closer to the cell center
+        if (distance.candidate >= distance.present) {
+          continue;
+        }
+      }
+
       assert(0 <= cx && cx <= 1, `'cx' out of bounds: ${cx}`);
       assert(0 <= cy && cy <= 1, `'cy' out of bounds: ${cy}`);
 
