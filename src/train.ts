@@ -105,7 +105,7 @@ async function train() {
     console.log('Randomizing training data... [%d]', trainSrc.length);
     console.time('randomize');
 
-    augmentTrain(trainSrc, trainInputs, 0.5);
+    augmentTrain(trainSrc, trainInputs, 0.25);
 
     console.timeEnd('randomize');
 
