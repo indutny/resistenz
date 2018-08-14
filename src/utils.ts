@@ -12,6 +12,13 @@ export interface IVector {
   readonly y: number;
 }
 
+export interface IRect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface IOrientedRect {
   readonly cx: number;
   readonly cy: number;
@@ -34,6 +41,17 @@ export function dot(a: IVector, b: IVector): number {
 
 export function triangleArea(a: IVector, b: IVector): number {
   return Math.abs(a.x * b.y - a.y * b.x) / 2;
+}
+
+export function polygonCenter(poly: Polygon): IPoint {
+  const center = { x: 0, y: 0 };
+  for (const p of poly) {
+    center.x += p.x;
+    center.y += p.y;
+  }
+  center.x /= poly.length;
+  center.y /= poly.length;
+  return center;
 }
 
 export function rotate(p: IPoint, angle: number): IPoint {

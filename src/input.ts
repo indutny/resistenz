@@ -4,7 +4,7 @@ import jimp = require('jimp');
 
 import {
   Polygon, IPoint, IOrientedRect, polygonToRect, rotate,
-  vector, norm
+  vector, norm, polygonCenter,
 } from './utils';
 
 export const TARGET_WIDTH = 224;
@@ -95,13 +95,7 @@ export class Input {
 
     clone.crop(cropX, cropY, cropW, cropH);
     polys = polys.filter((points) => {
-      const center = { x: 0, y: 0 };
-      for (const p of points) {
-        center.x += p.x;
-        center.y += p.y;
-      }
-      center.x /= points.length;
-      center.y /= points.length;
+      const center = polygonCenter(points);
 
       return center.x >= cropX && center.x <= cropX + cropW &&
              center.y >= cropY && center.y <= cropY + cropH;
