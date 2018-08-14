@@ -16,17 +16,19 @@ export class Output extends tf.layers.Layer {
     if (Array.isArray(inputs)) {
       inputs = inputs[0];
     }
-    const [ center, size, angle, confidence ] =
-        tf.split(inputs, [ 2, 2, 2, 1 ], -1);
+    return tf.tidy(() => {
+      const [ center, size, angle, confidence ] =
+          tf.split(inputs, [ 2, 2, 2, 1 ], -1);
 
-    const depth = size.shape[size.shape.length - 2];
+      const depth = size.shape[size.shape.length - 2];
 
-    return tf.concat([
-      tf.sigmoid(center),
-      tf.exp(size).mul(tf.tensor2d(PRIOR_SIZES, [ depth, 2 ])),
-      tf.softmax(angle, -1),
-      tf.sigmoid(confidence),
-    ], -1);
+      return tf.concat([
+        tf.sigmoid(center),
+        tf.exp(size).mul(tf.tensor2d(PRIOR_SIZES, [ depth, 2 ])),
+        tf.softmax(angle, -1),
+        tf.sigmoid(confidence),
+      ], -1);
+    });
   }
 
   public getClassName(): string {
