@@ -13,7 +13,9 @@ export const GRID_DEPTH = 5;
 const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ_LOCAL = 0.5;
 const LAMBDA_NO_OBJ_GLOBAL = 0.5;
-const LAMBDA_IOU = 5;
+const LAMBDA_COORD = 5;
+
+const IOU_THRESHOLD = 0.7;
 
 const LR = 1e-2;
 const MOMENTUM = 0.9;
@@ -158,11 +160,17 @@ export class Model {
       const angleMul = tf.scalar(1).sub(angleLoss);
       const angleIOU = iou.mul(angleMul);
 
-      // Mask out maximum angleIOU in each grid group
+      // Mask out maximum angleIOU in each grid group, and everything higher
+      // than threshold
+      const thresholdMask = angleIOU.greaterEqual(tf.scalar(IOU_THRESHOLD))
+          .cast('float32');
+
       const argMax = angleIOU.argMax(-1).flatten();
       const maskShape = angleIOU.shape;
-      const onMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0).cast('float32')
-          .reshape(maskShape);
+      const maxMask = tf.oneHot(argMax, GRID_DEPTH, 1, 0)
+          .cast('float32').reshape(maskShape);
+
+      const onMask = tf.maximum(thresholdMask, maxMask);
 
       // Find masks for object presence (`x` is a ground truth)
       const hasObject = x.confidence.mul(onMask);
@@ -191,7 +199,7 @@ export class Model {
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
-          .mul(tf.scalar(LAMBDA_IOU));
+          .mul(tf.scalar(LAMBDA_COORD));
 
       return objLoss.add(noObjLocalLoss).add(noObjGlobalLoss).add(boxLoss);
     });
