@@ -1,9 +1,10 @@
+#!/usr/bin/env npx ts-node
 import { promisify } from 'util';
 
-import { load } from './dataset';
-import { TARGET_WIDTH, TARGET_HEIGHT } from './input';
-import { IOrientedRect } from './utils';
-import { GRID_DEPTH } from './model';
+import { load } from '../src/dataset';
+import { TARGET_WIDTH, TARGET_HEIGHT } from '../src/input';
+import { IOrientedRect } from '../src/utils';
+import { GRID_DEPTH } from '../src/model';
 
 const kmeans = require('node-kmeans');
 
@@ -11,11 +12,11 @@ const LR = 0.001;
 const RANDOM_COUNT = 2;
 
 async function generate() {
-  const inputs = await load();
+  const dataset = await load();
 
   const rects: IOrientedRect[] = [];
   let counter = 0;
-  for (const input of inputs) {
+  for (const input of dataset.train.concat(dataset.validate)) {
     console.error('image: %d', counter++);
     for (let i = 0; i < RANDOM_COUNT; i++) {
       for (const rect of input.randomize().computeRects()) {
