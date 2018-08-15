@@ -13,7 +13,7 @@
     "@tensorflow/tfjs": "^0.12.4",
     "@tensorflow/tfjs-node": "^0.1.11",
     "exif-parser": "^0.1.12",
-    "jimp": "^0.3.2",
+    "jimp": "^0.3.5",
     "node-fetch": "^2.2.0",
     "node-kmeans": "^1.1.8",
     "typescript": "^3.0.1"

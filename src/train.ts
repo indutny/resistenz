@@ -9,6 +9,7 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 import { Model, GRID_DEPTH } from './model';
+import { ImagePool } from './image-pool';
 
 const IMAGE_DIR = path.join(__dirname, '..', 'images');
 const SAVE_DIR = path.join(__dirname, '..', 'saves');
@@ -16,18 +17,22 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
-const AUGMENT_MULTIPLY = 2;
+const AUGMENT_MULTIPLY = 1;
 
-function augmentTrain(src: ReadonlyArray<Input>,
-                      list: Input[], minPercent: number): void {
+async function augmentTrain(pool: ImagePool,
+    src: ReadonlyArray<Input>,
+    list: Input[], minPercent: number) {
+
   const targetSize = src.length * AUGMENT_MULTIPLY;
   const minCount = Math.max(targetSize - list.length, list.length * minPercent);
 
   // Add random entries
-  for (let i = 0; i < minCount; i++) {
+  let done = 0;
+  await Promise.all(new Array(minCount).fill(0).map(async () => {
     const index = (src.length * Math.random()) | 0;
-    list.push(src[index].randomize());
-  }
+    list.push(await pool.randomize(src[index]));
+    console.log(`${done++}/${minCount}`);
+  }));
 
   // Remove random entries
   while (list.length > targetSize) {
@@ -67,6 +72,8 @@ function tensorify(pairs: ReadonlyArray<ITrainingPair>) {
 }
 
 async function train() {
+  const pool = new ImagePool();
+
   const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
 
   const m = new Model(mobilenet);
@@ -109,7 +116,7 @@ async function train() {
     console.log('Randomizing training data... [%d]', trainSrc.length);
     console.time('randomize');
 
-    augmentTrain(trainSrc, trainInputs, 0.5);
+    await augmentTrain(pool, trainSrc, trainInputs, 0.5);
 
     console.timeEnd('randomize');
 
@@ -166,6 +173,8 @@ async function train() {
     tf.dispose(validation.single);
   }
   tf.dispose(validation.all);
+
+  pool.close();
 }
 
 train().then(() => {

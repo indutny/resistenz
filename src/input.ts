@@ -229,9 +229,7 @@ export class Input {
   }
 
   public async toSVG(rects?: ReadonlyArray<IColoredRect>): Promise<string> {
-    // TODO(indutny): remove this after Jimp bug is fixed
-    const jpeg: Buffer =
-        (await this.image.getBufferAsync(jimp.MIME_JPEG) as any);
+    const jpeg =  await this.image.getBufferAsync(jimp.MIME_JPEG);
     const src = `data:${jimp.MIME_JPEG};base64,${jpeg.toString('base64')}`;
     const img = `<image xlink:href="${src}" />`;
 
