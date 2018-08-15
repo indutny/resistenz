@@ -194,10 +194,9 @@ export class Model {
       const centerLoss =
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
 
-      const priorSizes = tf.tensor2d(PRIOR_SIZES, [ GRID_DEPTH, 2 ]);
       const sizeLoss = tf.squaredDifference(
-        x.box.size.add(EPSILON).div(priorSizes).log(),
-        y.box.size.div(priorSizes).log()).sum(-1);
+        x.box.size.add(EPSILON).log(),
+        y.box.size.log()).sum(-1);
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
