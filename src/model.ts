@@ -17,7 +17,7 @@ const LAMBDA_COORD = 5;
 
 const IOU_THRESHOLD = 0.7;
 
-const LR = 1e-4;
+const LR = 1e-3;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -64,6 +64,7 @@ export class Model {
     convPool(3, 128, 2, 2);
     convPool(3, 256, 2, 2);
     convPool(3, 512, 2, 1);
+    convPool(3, 1024, 2, 1);
 
     function convBN(kernel: number, filters: number,
                     activation: string = 'relu') {
