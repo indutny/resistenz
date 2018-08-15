@@ -69,9 +69,8 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
   return { validate, train };
 }
 
-/*
 load().then(async (inputs) => {
-  const random = inputs[0];
+  const random = inputs.train[0].randomize();
 
   let svg = await random.toSVG();
   fs.writeFileSync('/tmp/1.svg', svg);
@@ -81,4 +80,3 @@ load().then(async (inputs) => {
   svg = await random.toSVG(random.predictionToRects(grid, 1));
   fs.writeFileSync('/tmp/2.svg', svg);
 });
-*/

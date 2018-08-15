@@ -31,7 +31,7 @@ async function augmentTrain(pool: ImagePool,
   let done = 0;
   await Promise.all(new Array(minCount).fill(0).map(async () => {
     const index = (src.length * Math.random()) | 0;
-    list.push(await pool.randomize(src[index]));
+    list.push(src[index].randomize());
     done++;
     if (done % 100 === 0 || done === minCount) {
       console.log(`${done}/${minCount}`);
