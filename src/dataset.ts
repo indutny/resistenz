@@ -69,6 +69,7 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
   return { validate, train };
 }
 
+/*
 import { ImagePool } from './image-pool';
 
 load().then(async (inputs) => {
@@ -85,3 +86,4 @@ load().then(async (inputs) => {
 
   pool.close();
 });
+ */

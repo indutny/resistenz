@@ -31,7 +31,7 @@ async function augmentTrain(pool: ImagePool,
   let done = 0;
   await Promise.all(new Array(minCount).fill(0).map(async () => {
     const index = (src.length * Math.random()) | 0;
-    list.push(src[index].randomize());
+    list.push(await pool.randomize(src[index]));
     done++;
     if (done % 100 === 0 || done === minCount) {
       console.log(`${done}/${minCount}`);
@@ -163,8 +163,8 @@ async function train() {
             process.stdout.write('\n');
             console.log('epoch %d end %j', epoch, logs);
 
-            await predict('train', trainInputs[0], training.single.image,
-              training.single.targetGrid);
+            await predict('train', trainInputs[trainInputs.length - 1],
+              training.single.image, training.single.targetGrid);
 
             if (validateSrc.length >= 1) {
               await predict('validate', validateSrc[0],
