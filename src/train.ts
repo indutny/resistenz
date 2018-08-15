@@ -119,7 +119,7 @@ async function train() {
   const train = trainInputs.map((input) => input.toTrainingPair());
   const training = {
     all: tensorify(train),
-    single: tensorify([ train[0] ]),
+    single: tensorify([ train[train.length - 1] ]),
   };
 
   console.log('Running fit');
