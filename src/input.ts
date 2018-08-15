@@ -16,9 +16,9 @@ export const GRID_CHANNELS = 7;
 // Max amount of crop from each side
 const MAX_CROP_PERCENT = 0.05;
 
-const MAX_BRIGHTNESS = 0.2;
-const MAX_CONTRAST = 0.2;
-const MAX_HUE = 15;
+const MAX_BRIGHTNESS = 0.1;
+const MAX_CONTRAST = 0.1;
+const MAX_HUE = 10;
 const MAX_ROTATE = 0;
 
 export interface ITrainingPair {
@@ -36,7 +36,7 @@ export class Input {
   }
 
   private random(): number {
-    return Math.random();
+    return 0.0;
   }
 
   public randomize(): Input {

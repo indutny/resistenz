@@ -11,10 +11,10 @@ import { MobileNetLayer } from './layers/mobilenet';
 export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
-const LAMBDA_NO_OBJ = 0.5;
+const LAMBDA_NO_OBJ = 1 / GRID_DEPTH;
 const LAMBDA_IOU = 5;
 
-const LR = 1e-3;
+const LR = 1e-2;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -179,7 +179,6 @@ export class Model {
       const centerLoss =
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
 
-      // Use square root of size as in YOLO's paper
       const sizeLoss = tf.squaredDifference(
           x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 

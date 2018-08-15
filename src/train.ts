@@ -19,18 +19,21 @@ const MOBILE_NET =
 
 const AUGMENT_MULTIPLY = 1;
 
+let augmentIndex = 0;
+
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
-    list: Input[], minPercent: number = 0.25) {
+    list: Input[], minPercent: number = 1) {
 
   const targetSize = src.length * AUGMENT_MULTIPLY;
   const minCount =
       Math.max(targetSize - list.length, list.length * minPercent) | 0;
 
-  // Add random entries
+  // Replace everything
   let done = 0;
   await Promise.all(new Array(minCount).fill(0).map(async () => {
-    const index = (src.length * Math.random()) | 0;
+    const index = augmentIndex;
+    augmentIndex = (augmentIndex + 1) % src.length;
     list.push(await pool.randomize(src[index]));
     done++;
     if (done % 100 === 0 || done === minCount) {
