@@ -195,8 +195,7 @@ export class Model {
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
 
       const sizeLoss = tf.squaredDifference(
-        x.box.size.add(EPSILON).log(),
-        y.box.size.log()).sum(-1);
+        x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
