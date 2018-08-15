@@ -11,7 +11,7 @@ const PRIOR_SIZES = [
   0.6069002757259446, 0.24344832037024136,
 ];
 
-function revSigmoid(value) {
+function revSigmoid(value: number): number {
   return -Math.log(1 / value - 1);
 }
 
