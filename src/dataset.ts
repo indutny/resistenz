@@ -11,34 +11,62 @@ import { Input, TARGET_WIDTH, TARGET_HEIGHT } from './input';
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const IMAGE_DIR = path.join(DATASET_DIR, 'processed');
 
-export async function load(): Promise<ReadonlyArray<Input>> {
+export interface IDataset {
+  readonly train: ReadonlyArray<Input>;
+  readonly validate: ReadonlyArray<Input>;
+}
+
+export async function load(validateSplit: number = 0.1): Promise<IDataset> {
   const dir = await promisify(fs.readdir)(IMAGE_DIR);
 
   let files = dir.filter((file) => /\.json$/.test(file));
 
-  // Stupid, but stable semi-random sort
-  files = files.map((file) => {
-    return {
-      file,
-      hash: crypto.createHash('sha256').update(file).digest('hex'),
-    };
-  }).sort((a, b) => {
-    return a.hash === b.hash ? 0 : a.hash < b.hash ? -1 : 1;
-  }).map((entry) => entry.file);
+  function getFileHash(file: string) {
+    return file.replace(/_.*$/, '');
+  }
+
+  const hashes = Array.from(new Set(files.map(getFileHash)));
+
+  const validateCount = (validateSplit * hashes.length) | 0;
 
   console.log('Loading images...');
   let done = 0;
-  return await Promise.all(files.map(async (labelsFile) => {
-    const imageFile = labelsFile.replace(/\.json$/, '') + '.jpg';
-    const image = await jimp.read(path.join(IMAGE_DIR, imageFile));
-    const rawLabels = await promisify(fs.readFile)(
-        path.join(IMAGE_DIR, labelsFile));
+  let total = files.length;
 
-    const labels = JSON.parse(rawLabels.toString());
+  function filterByHashes(hashes: ReadonlyArray<string>): string[] {
+    const set = new Set(hashes);
+    return files.filter((file) => {
+      const hash = getFileHash(file);
 
-    console.log(`${done++}/${files.length}`);
-    return new Input(image, labels.polygons);
-  }));
+      return set.has(hash);
+    });
+  }
+
+  async function getInputs(hashes: ReadonlyArray<string>) {
+    const files = filterByHashes(hashes);
+
+    return await Promise.all(files.map(async (labelsFile) => {
+      const imageFile = labelsFile.replace(/\.json$/, '') + '.jpg';
+      const image = await jimp.read(path.join(IMAGE_DIR, imageFile));
+      const rawLabels = await promisify(fs.readFile)(
+          path.join(IMAGE_DIR, labelsFile));
+
+      const labels = JSON.parse(rawLabels.toString());
+
+      done++;
+      if (done % 100 === 0 || done === total) {
+        console.log(`${done}/${total}`);
+      }
+      return new Input(image, labels.polygons);
+    }));
+  }
+
+  const [ validate, train ] = await Promise.all([
+    getInputs(hashes.slice(0, validateCount)),
+    getInputs(hashes.slice(validateCount)),
+  ]);
+
+  return { validate, train };
 }
 
 /*
@@ -53,4 +81,4 @@ load().then(async (inputs) => {
   svg = await random.toSVG(random.predictionToRects(grid, 1));
   fs.writeFileSync('/tmp/2.svg', svg);
 });
- */
+*/

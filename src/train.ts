@@ -31,7 +31,10 @@ async function augmentTrain(pool: ImagePool,
   await Promise.all(new Array(minCount).fill(0).map(async () => {
     const index = (src.length * Math.random()) | 0;
     list.push(await pool.randomize(src[index]));
-    console.log(`${done++}/${minCount}`);
+    done++;
+    if (done % 100 === 0 || done === minCount) {
+      console.log(`${done}/${minCount}`);
+    }
   }));
 
   // Remove random entries
@@ -77,12 +80,11 @@ async function train() {
   const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
 
   const m = new Model(mobilenet);
-  const inputs = await load();
+  const dataset = await load();
 
-  const validationCount = (inputs.length * 0.1) | 0;
-  const trainSrc = inputs.slice(validationCount);
+  const trainSrc = dataset.train;
 
-  const validateSrc = inputs.slice(0, validationCount)
+  const validateSrc = dataset.validate
     .map((val) => val.resize());
 
   console.time('validation tensorify');
