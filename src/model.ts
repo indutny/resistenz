@@ -191,10 +191,8 @@ export class Model {
           .mul(noObjectGlobal).sum(-1)
           .mul(tf.scalar(LAMBDA_NO_OBJ_GLOBAL));
 
-      const priorSizes = tf.tensor2d(PRIOR_SIZES, [ GRID_DEPTH, 2 ]);
       const centerLoss =
-        tf.squaredDifference(x.box.center.div(priorSizes),
-                             y.box.center.div(priorSizes)).sum(-1);
+          tf.squaredDifference(x.box.center, y.box.center).sum(-1);
 
       const sizeLoss = tf.squaredDifference(
         x.box.size.add(EPSILON).log(),
