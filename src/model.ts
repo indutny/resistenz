@@ -11,7 +11,7 @@ import { MobileNetLayer } from './layers/mobilenet';
 export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
-const LAMBDA_NO_OBJ_LOCAL = 0.1;
+const LAMBDA_NO_OBJ_LOCAL = 0.5;
 const LAMBDA_NO_OBJ_GLOBAL = 0.5;
 const LAMBDA_IOU = 5;
 
