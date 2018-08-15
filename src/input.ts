@@ -274,9 +274,9 @@ export class Input {
     });
 
     return `
-      <svg width="${width}" height="${height}"
-           xmlns="http://www.w3.org/2000/svg"
-           xmlns:xlink="http://www.w3.org/1999/xlink">
+      <svg version="1.1" baseProfile="full"
+           width="${width}" height="${height}"
+           xmlns="http://www.w3.org/2000/svg">
         ${img}
         ${polygons.join('\n')}
       </svg>`;
