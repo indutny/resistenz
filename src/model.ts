@@ -21,9 +21,6 @@ const LR = 1e-3;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
-const EPSILON = tf.scalar(1e-23);
-const PI = tf.scalar(Math.PI);
-
 export class Model {
   public readonly model: tf.Sequential;
 
@@ -151,8 +148,10 @@ export class Model {
       const yArea = area(y.box.size);
       const unionArea = xArea.add(yArea).sub(interArea);
 
+      const epsilon = tf.scalar(1e-23);
+
       // Calculate Intersection over Union
-      const iou = interArea.div(unionArea.add(EPSILON));
+      const iou = interArea.div(unionArea.add(epsilon));
 
       // Multiply by angle difference
       // NOTE: (cos x - cos y)^2 + (sin x - sin y)^2 = 2 (1 - cos (x - y))
