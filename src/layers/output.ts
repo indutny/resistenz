@@ -3,7 +3,7 @@ import * as tf from '@tensorflow/tfjs';
 import Tensor = tf.Tensor;
 
 // K-means
-const PRIOR_SIZES = [
+export const PRIOR_SIZES = [
   0.10768077077307367, 0.26221649485269616,
   0.2029919860148871, 0.5090933602720991,
   0.2066486075129398, 0.08824253371241374,

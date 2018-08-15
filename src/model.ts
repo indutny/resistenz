@@ -5,7 +5,7 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 
-import { Output } from './layers/output';
+import { Output, PRIOR_SIZES } from './layers/output';
 import { MobileNetLayer } from './layers/mobilenet';
 
 export const GRID_DEPTH = 5;
@@ -194,8 +194,10 @@ export class Model {
       const centerLoss =
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
 
+      const priorSizes = tf.tensor2d(PRIOR_SIZES, [ GRID_DEPTH, 2 ]);
       const sizeLoss = tf.squaredDifference(
-          x.box.size.log(), y.box.size.log()).sum(-1);
+        x.box.size.div(priorSizes).log(), y.box.size.div(priorSizes).log())
+        .sum(-1);
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
