@@ -27,7 +27,7 @@ export interface ITrainingPair {
 }
 
 export interface IColoredRect extends IOrientedRect {
-  readonly alpha?: number;
+  readonly confidence?: number;
 }
 
 export class Input {
@@ -259,14 +259,15 @@ export class Input {
         return `${point.x + rect.cx},${point.y + rect.cy}`;
       }).join(' ');
 
-      const alpha = rect.alpha === undefined ? 1 : rect.alpha;
+      const confidence = rect.confidence === undefined ? 1 : rect.confidence;
+      const alpha = Math.exp(-1 / (confidence + 1e-18)) / Math.exp(-1);
 
-      const color = alpha < 0.5 ?
+      const color = confidence < 0.5 ?
           `rgba(255,0,0,${alpha})` :
           `rgba(0,255,0,${alpha})`;
 
-      const fillColor = alpha < 0.5 ? 'none' :
-        `rgba(0,255,0,${(alpha - 0.5) / 2})`;
+      const fillColor = confidence < 0.5 ? 'none' :
+        `rgba(0,255,0,${alpha / 2})`;
 
       return `<polygon points="${points}" fill="${fillColor}" ` +
         `stroke="${color}"/>`;
@@ -311,7 +312,7 @@ export class Input {
         height: (prediction[i + 3]) * bitmap.height,
         angle: Math.atan2(sin, cos),
 
-        alpha: confidence,
+        confidence,
       };
 
       rects.push(rect);
