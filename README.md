@@ -1,4 +1,4 @@
-# resistanz
+# resistenz
 
 WIP
 
