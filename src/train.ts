@@ -109,7 +109,7 @@ async function train() {
     let svg = await input.toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}.svg`), svg);
 
-    rects = input.predictionToRects(await grid.data(), 1);
+    rects = input.predictionToRects(await grid.data(), GRID_DEPTH);
     svg = await input.toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
