@@ -21,7 +21,7 @@ const AUGMENT_MULTIPLY = 1;
 
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
-    list: Input[], minPercent: number) {
+    list: Input[], minPercent: number = 0.25) {
 
   const targetSize = src.length * AUGMENT_MULTIPLY;
   const minCount =
@@ -38,10 +38,9 @@ async function augmentTrain(pool: ImagePool,
     }
   }));
 
-  // Remove random entries
+  // Remove entries from the list
   while (list.length > targetSize) {
-    const index = (list.length * Math.random()) | 0;
-    list.splice(index, 1);
+    list.shift();
   }
 }
 
@@ -119,7 +118,7 @@ async function train() {
     console.log('Randomizing training data... [%d]', trainSrc.length);
     console.time('randomize');
 
-    await augmentTrain(pool, trainSrc, trainInputs, 0.5);
+    await augmentTrain(pool, trainSrc, trainInputs);
 
     console.timeEnd('randomize');
 
