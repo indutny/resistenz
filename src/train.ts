@@ -24,7 +24,8 @@ async function augmentTrain(pool: ImagePool,
     list: Input[], minPercent: number) {
 
   const targetSize = src.length * AUGMENT_MULTIPLY;
-  const minCount = Math.max(targetSize - list.length, list.length * minPercent);
+  const minCount =
+      Math.max(targetSize - list.length, list.length * minPercent) | 0;
 
   // Add random entries
   let done = 0;
