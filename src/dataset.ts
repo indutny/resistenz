@@ -69,8 +69,11 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
   return { validate, train };
 }
 
+import { ImagePool } from './image-pool';
+
 load().then(async (inputs) => {
-  const random = inputs.train[0].randomize();
+  const pool = new ImagePool();
+  const random = await pool.randomize(inputs.train[0]);
 
   let svg = await random.toSVG();
   fs.writeFileSync('/tmp/1.svg', svg);
@@ -79,4 +82,6 @@ load().then(async (inputs) => {
 
   svg = await random.toSVG(random.predictionToRects(grid, 1));
   fs.writeFileSync('/tmp/2.svg', svg);
+
+  pool.close();
 });
