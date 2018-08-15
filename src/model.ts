@@ -45,7 +45,7 @@ export class Model {
 
       model.add(tf.layers.batchNormalization({}));
 
-      model.add(tf.layers.activation({ activation: 'relu' }));
+      model.add(tf.layers.leakyReLU());
 
       model.add(tf.layers.maxPooling2d({
         poolSize: [ pool, pool ],
@@ -64,7 +64,7 @@ export class Model {
     convPool(3, 1024, 2, 1);
 
     function convBN(kernel: number, filters: number,
-                    activation: string = 'relu') {
+                    activation: string = 'leaky') {
       model.add(tf.layers.conv2d({
         kernelSize: kernel,
         filters,
@@ -72,7 +72,11 @@ export class Model {
       }));
 
       model.add(tf.layers.batchNormalization({}));
-      model.add(tf.layers.activation({ activation }));
+      if (activation === 'leaky') {
+        model.add(tf.layers.leakyReLU());
+      } else {
+        model.add(tf.layers.activation({ activation }));
+      }
     }
 
     // Detection layer
