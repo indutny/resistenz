@@ -25,7 +25,7 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
     return file.replace(/_.*$/, '');
   }
 
-  const hashes = Array.from(new Set(files.map(getFileHash))).slice(0, 1);
+  const hashes = Array.from(new Set(files.map(getFileHash))).slice(0, 10);
 
   const validateCount = (validateSplit * hashes.length) | 0;
 
