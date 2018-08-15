@@ -11,6 +11,10 @@ const PRIOR_SIZES = [
   0.6069002757259446, 0.24344832037024136,
 ];
 
+function revSigmoid(value) {
+  return -Math.log(1 / value - 1);
+}
+
 export class Output extends tf.layers.Layer {
   public call(inputs: Tensor|Tensor[], kwargs: any): Tensor|Tensor[] {
     return tf.tidy(() => {
@@ -23,9 +27,13 @@ export class Output extends tf.layers.Layer {
 
       const depth = size.shape[size.shape.length - 2];
 
+      const priorSizes = tf.tensor2d(PRIOR_SIZES.map(revSigmoid), [ depth, 2 ]);
+
       return tf.concat([
         tf.sigmoid(center),
-        tf.exp(size).mul(tf.tensor2d(PRIOR_SIZES, [ depth, 2 ])),
+
+        // Offset sigmoid
+        tf.sigmoid(size.add(priorSizes)),
         tf.softmax(angle, -1),
         tf.sigmoid(confidence),
       ], -1);
