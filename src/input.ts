@@ -229,12 +229,12 @@ export class Input {
   }
 
   public async toSVG(rects?: ReadonlyArray<IColoredRect>): Promise<string> {
-    const jpeg =  await this.image.getBufferAsync(jimp.MIME_JPEG);
-    const src = `data:${jimp.MIME_JPEG};base64,${jpeg.toString('base64')}`;
-    const img = `<image xlink:href="${src}" />`;
-
+    const src =  await this.image.getBase64Async(jimp.MIME_PNG);
     const width = this.image.bitmap.width;
     const height = this.image.bitmap.height;
+
+    const img = `<image width="${width}" height="${height}" ` +
+      `xlink:href="${src}" />`;
 
     if (!rects) {
       rects = this.computeRects();
