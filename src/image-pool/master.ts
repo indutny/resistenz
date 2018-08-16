@@ -5,18 +5,28 @@ import { Buffer } from 'buffer';
 import jimp = require('jimp');
 
 import { Input } from '../input';
+import { Polygon } from '../utils';
+
+interface IWorker {
+  readonly proc: ChildProcess;
+  readonly images: Set<number>;
+}
 
 export class Master {
   private seq: number = 0;
-  private lastWorker: number = 0;
-  private workers: ChildProcess[] = [];
+  private workers: IWorker[] = [];
   private readonly callbacks: Map<number, (input: Input) => void> = new Map();
 
-  constructor(private readonly size: number = os.cpus().length) {
-    while (this.workers.length < this.size) {
+  public readonly size: number;
+
+  constructor(private readonly images: ReadonlyArray<Input>,
+              private readonly maxWorkers: number = os.cpus().length) {
+    this.size = this.images.length;
+
+    while (this.workers.length < this.maxWorkers) {
       const worker = fork(path.join(__dirname, 'worker.ts'));
 
-      this.workers.push(worker);
+      this.workers.push({ proc: worker, images: new Set() });
 
       worker.on('message', async (msg) => {
         const callback = this.callbacks.get(msg.seq)!;
@@ -28,22 +38,35 @@ export class Master {
     }
   }
 
-  public async randomize(input: Input): Promise<Input> {
-    const image = await input.image.getBufferAsync(jimp.MIME_PNG);
+  public get(index: number): Input {
+    return this.images[index];
+  }
 
-    return new Promise<Input>((resolve) => {
-      const worker = this.workers[this.lastWorker];
-      this.lastWorker = (this.lastWorker + 1) % this.workers.length;
+  public async randomize(index: number): Promise<Input> {
+    return new Promise<Input>(async (resolve) => {
+      const worker = this.workers[index % this.workers.length];
 
       const seq = this.seq++;
 
       this.callbacks.set(seq, resolve);
 
-      worker.send({
+      let maybeImage: string | undefined = undefined;
+      let maybePolys: ReadonlyArray<Polygon> | undefined = undefined;
+      if (!worker.images.has(index)) {
+        const input = this.images[index];
+        const buffer = await input.image.getBufferAsync(jimp.MIME_PNG);
+        maybeImage = buffer.toString('base64');
+        maybePolys = input.polys;
+      }
+
+      worker.proc.send({
         seq,
-        image: image.toString('base64'),
-        polys: input.polys,
+        index,
+        image: maybeImage,
+        polys: maybePolys,
       });
+
+      worker.images.add(index);
     });
   }
 
@@ -51,7 +74,7 @@ export class Master {
     const workers = this.workers;
     this.workers = [];
     for (const worker of workers) {
-      worker.kill();
+      worker.proc.kill();
     }
   }
 }

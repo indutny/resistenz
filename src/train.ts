@@ -17,48 +17,68 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
-const AUGMENT_TOTAL = 256;
-
 interface ITensorifyResult {
   readonly image: tf.Tensor;
   readonly grid: tf.Tensor;
 }
 
-async function augmentTrain(pool: ImagePool,
-    src: ReadonlyArray<Input>,
-    list: Input[], minPercent: number = 0.02) {
+async function augmentTrain(
+    pool: ImagePool,
+    previous: ReadonlyArray<Input>,
+    minPercent: number = 0.2): Promise<ReadonlyArray<Input>> {
+  const replacements: Set<number> = new Set();
 
-  const targetSize = Math.min(src.length, AUGMENT_TOTAL);
-  const minCount = Math.min(targetSize,
-      Math.max(targetSize - list.length, Math.ceil(list.length * minPercent)));
-
-  // Add random entries
-  let done = 0;
-  await Promise.all(new Array(minCount).fill(0).map(async () => {
-    const index = (src.length * Math.random()) | 0;
-    list.push(await pool.randomize(src[index]));
-    done++;
-    if (done % 100 === 0 || done === minCount) {
-      console.log(`${done}/${minCount}`);
+  if (previous.length === 0) {
+    for (let i = 0; i < pool.size; i++) {
+      replacements.add(i);
     }
-  }));
-
-  // Remove entries from the list
-  while (list.length > targetSize) {
-    list.shift();
+  } else {
+    const minCount = Math.ceil(previous.length * minPercent);
+    for (let i = 0; i < minCount; i++) {
+      let index: number;
+      do {
+        index = (Math.random() * pool.size) | 0;
+      } while (replacements.has(index));
+      replacements.add(index);
+    }
   }
-}
 
-async function randomizeInputs(pool: ImagePool, src: ReadonlyArray<Input>) {
+  // Shuffle
+  const indices: number[] = [];
+  for (let i = 0; i < pool.size; i++) {
+    indices.push(i);
+  }
+
+  for (let i = indices.length - 2; i >= 0; i--) {
+    const j = (Math.random() * i) | 0;
+
+    const t = indices[i];
+    indices[i] = indices[j];
+    indices[j] = t;
+  }
+
   let done = 0;
-  return Promise.all(src.map(async (input) => {
-    const res = await pool.randomize(input);
-    done++;
-    if (done % 100 === 0 || done === src.length) {
-      console.log(`${done}/${src.length}`);
+  return await Promise.all(indices.map(async (index) => {
+    let res: Input;
+    if (replacements.has(index)) {
+      res = await pool.randomize(index);
+    } else {
+      res = pool.get(index);
     }
+
+    done++;
+    if (done % 100 === 0 || done === pool.size) {
+      console.log(`${done}/${pool.size}`);
+    }
+
     return res;
   }));
+}
+
+function *batchify<T>(list: ReadonlyArray<T>, batchSize: number = 10) {
+  for (let i = 0; i < list.length; i += batchSize) {
+    yield list.slice(i, i + batchSize);
+  }
 }
 
 function tensorify(pairs: ReadonlyArray<ITrainingPair>): ITensorifyResult {
@@ -97,12 +117,12 @@ function disposeTensorify(result: ITensorifyResult) {
 }
 
 async function train() {
-  const pool = new ImagePool();
-
   const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
 
   const m = new Model(mobilenet);
   const dataset = await load();
+
+  const pool = new ImagePool(dataset.train);
 
   const trainSrc = dataset.train;
 
@@ -130,7 +150,7 @@ async function train() {
   }
 
   // Shared training data
-  const trainInputs: Input[] = [];
+  let trainInputs: ReadonlyArray<Input> = [];
 
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 1) {
@@ -138,57 +158,44 @@ async function train() {
 
     console.log('Randomizing training data... [%d]', trainSrc.length);
     console.time('randomize');
-    await augmentTrain(pool, trainSrc, trainInputs);
+    trainInputs = await augmentTrain(pool, trainInputs);
     console.timeEnd('randomize');
 
-    console.log('Translating to tensors...');
-    console.time('tensorify');
-    const train = trainInputs.map((input) => input.toTrainingPair());
-    const training = {
-      all: tensorify(train),
-      single: tensorify([ train[0] ]),
-    };
-    console.timeEnd('tensorify');
-
     console.time('fit');
-    const history = await m.model.fit(
-      training.all.image,
-      training.all.grid,
-      {
+    for (const batch of batchify(trainInputs)) {
+      const batchTensor = tensorify(
+        batch.map((input) => input.toTrainingPair()));
+
+      const history = await m.model.fit(batchTensor.image, batchTensor.grid, {
         initialEpoch: epoch,
-        batchSize: 10,
+        batchSize: batch.length,
         epochs: epoch + 1,
-        validationData: validateSrc.length >= 1 ?
-          [ validation.all.image, validation.all.grid ] : undefined,
-        callbacks: {
-          onBatchEnd: async () => {
-            process.stdout.write('.');
-          },
-          onEpochEnd: async (epoch, logs) => {
-            process.stdout.write('\n');
-            console.log('epoch %d end %j', epoch, logs);
-
-            await predict('train', trainInputs[0], training.single);
-
-            if (validateSrc.length >= 1) {
-              const src = validateSrc[(Math.random() * validateSrc.length) | 0];
-              const single = tensorify([ src.toTrainingPair() ]);
-              await predict('validate', src, single);
-              disposeTensorify(single);
-            }
-          },
-        },
       });
+      process.stdout.write('.');
+
+      console.log(history);
+      disposeTensorify(batchTensor);
+    }
+    process.stdout.write('\n');
     console.timeEnd('fit');
+
+    {
+      const src = trainSrc[(Math.random() * trainSrc.length) | 0];
+      const single = tensorify([ src.toTrainingPair() ]);
+      await predict('train', src, single);
+      disposeTensorify(single);
+    }
+
+    if (validateSrc.length >= 1) {
+      const src = validateSrc[(Math.random() * validateSrc.length) | 0];
+      const single = tensorify([ src.toTrainingPair() ]);
+      await predict('validate', src, single);
+      disposeTensorify(single);
+    }
 
     console.log('memory %j', tf.memory());
     await m.model.save(`file://${SAVE_FILE}`);
-
-    // Clean-up memory?
-    disposeTensorify(training.single);
-    disposeTensorify(training.all);
   }
-
 
   // Clean-up memory?
   disposeTensorify(validation.all);

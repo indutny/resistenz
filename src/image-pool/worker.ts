@@ -3,9 +3,18 @@ import jimp = require('jimp');
 
 import { Input } from '../input';
 
+const images: Map<number, Input> = new Map();
+
 process.on('message', async (msg) => {
-  const image = await jimp.read(Buffer.from(msg.image, 'base64'));
-  const input = new Input(image, msg.polys);
+  let input: Input;
+  if (images.has(msg.index)) {
+    input = images.get(msg.index)!;
+  } else {
+    const image = await jimp.read(Buffer.from(msg.image, 'base64'));
+    input = new Input(image, msg.polys);
+
+    images.set(msg.index, input);
+  }
 
   const random = input.randomize();
 
