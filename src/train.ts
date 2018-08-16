@@ -178,11 +178,15 @@ async function train() {
     console.timeEnd('fit');
     console.log(`losses=${JSON.stringify(losses)}`);
 
-    const valLoss = await m.model.evaluate(validation.all.image,
+    let valLoss = await m.model.evaluate(validation.all.image,
                                            validation.all.grid, {
       batchSize: 10,
     });
-    if (Array.isArray(valLoss) && valLoss.length > 0) {
+    if (!Array.isArray(valLoss)) {
+      valLoss = [ valLoss ];
+    }
+
+    if (valLoss.length > 0) {
       const loss = await valLoss[0].data();
       console.log(`val_loss=${loss[0]}`);
     }
