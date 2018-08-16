@@ -31,6 +31,7 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
 
   console.log('Loading images...');
   let done = 0;
+  let total = 0;
 
   function filterByHashes(hashes: ReadonlyArray<string>): string[] {
     const set = new Set(hashes);
@@ -43,6 +44,7 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
 
   async function getInputs(hashes: ReadonlyArray<string>) {
     const files = filterByHashes(hashes);
+    total += files.length;
 
     return await Promise.all(files.map(async (labelsFile) => {
       const imageFile = labelsFile.replace(/\.json$/, '') + '.jpg';
@@ -53,8 +55,8 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
       const labels = JSON.parse(rawLabels.toString());
 
       done++;
-      if (done % 100 === 0 || done === files.length) {
-        console.log(`${done}/${files.length}`);
+      if (done % 100 === 0 || done === total) {
+        console.log(`${done}/${total}`);
       }
       return new Input(image, labels.polygons);
     }));
