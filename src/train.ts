@@ -17,13 +17,13 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
-const AUGMENT_MULTIPLY = 1;
+const AUGMENT_TOTAL = 64;
 
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
     list: Input[], minPercent: number = 0.25) {
 
-  const targetSize = src.length * AUGMENT_MULTIPLY;
+  const targetSize = AUGMENT_TOTAL;
   const minCount =
       Math.max(targetSize - list.length, list.length * minPercent) | 0;
 
@@ -115,28 +115,21 @@ async function train() {
     let svg = await input.toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}.svg`), svg);
 
-    svg = await input.toSVG();
+    rects = input.predictionToRects(await grid.data(), GRID_DEPTH);
+    svg = await input.toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
 
   // Shared training data
-  const trainInputs = await randomizeInputs(pool, trainSrc);
-  const train = trainInputs.map((input) => input.toTrainingPair());
-  const training = {
-    all: tensorify(train),
-    single: tensorify([ train[train.length - 1] ]),
-  };
+  const trainInputs = [];
 
   console.log('Running fit');
-  for (let epoch = 1; epoch < 1000000; epoch += 100) {
+  for (let epoch = 1; epoch < 1000000; epoch += 10) {
     console.log('Epoch %d', epoch);
 
-    /*
     console.log('Randomizing training data... [%d]', trainSrc.length);
     console.time('randomize');
-
     await augmentTrain(pool, trainSrc, trainInputs);
-
     console.timeEnd('randomize');
 
     console.log('Translating to tensors...');
@@ -144,11 +137,9 @@ async function train() {
     const train = trainInputs.map((input) => input.toTrainingPair());
     const training = {
       all: tensorify(train),
-      single: tensorify([ train[0] ]),
+      single: tensorify([ train[train.length - 1] ]),
     };
-
     console.timeEnd('tensorify');
-    */
 
     console.time('fit');
     const history = await m.model.fit(
@@ -157,7 +148,7 @@ async function train() {
       {
         initialEpoch: epoch,
         batchSize: 10,
-        epochs: epoch + 100,
+        epochs: epoch + 10,
         validationData: validateSrc.length >= 1 ?
           [ validation.all.image, validation.all.targetGrid ] : undefined,
         callbacks: {
@@ -182,11 +173,12 @@ async function train() {
 
     console.log('memory %j', tf.memory());
     await m.model.save(`file://${SAVE_FILE}`);
+
+    // Clean-up memory?
+    tf.dispose(training.single);
+    tf.dispose(training.all);
   }
 
-  // Clean-up memory?
-  tf.dispose(training.single);
-  tf.dispose(training.all);
 
   // Clean-up memory?
   if (validation.single) {
