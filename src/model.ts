@@ -17,7 +17,7 @@ const LAMBDA_COORD = 5;
 
 const IOU_THRESHOLD = 0.7;
 
-const LR = 1e-3;
+const LR = 1e-1;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -40,7 +40,6 @@ export class Model {
       model.add(tf.layers.conv2d({
         kernelSize: kernel,
         filters,
-        padding: 'same',
       }));
 
       model.add(tf.layers.batchNormalization({}));
@@ -204,6 +203,9 @@ export class Model {
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_COORD));
+
+      y.confidence.max(-1).print();
+      x.confidence.max(-1).print();
 
       return objLoss.add(noObjLocalLoss).add(noObjGlobalLoss).add(boxLoss);
     });
