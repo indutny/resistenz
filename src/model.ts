@@ -204,9 +204,6 @@ export class Model {
           .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_COORD));
 
-      y.confidence.max(-1).print();
-      x.confidence.max(-1).print();
-
       return objLoss.add(noObjLocalLoss).add(noObjGlobalLoss).add(boxLoss);
     });
   }
