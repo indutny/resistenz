@@ -174,7 +174,7 @@ async function train() {
               const src = validateSrc[(Math.random() * validateSrc.length) | 0];
               const single = tensorify([ src.toTrainingPair() ]);
               await predict('validate', src, single);
-              single.dispose();
+              disposeTensorify(single);
             }
           },
         },
