@@ -27,6 +27,8 @@ export interface IOrientedRect {
   readonly angle: number;
 }
 
+export type Color = [ number, number, number ];
+
 export function norm(a: IVector): number {
   return Math.sqrt(a.x ** 2 + a.y ** 2);
 }
@@ -118,4 +120,33 @@ export function polygonToRect(polygon: Polygon): IOrientedRect {
   }
 
   return { cx, cy, width, height, angle };
+}
+
+function interpolateColor(a: Color, b: Color, x: number): Color {
+  const aX = 1 - x;
+  const bX = x;
+
+  return [
+    a[0] * aX + b[0] * bX,
+    a[1] * aX + b[1] * bX,
+    a[2] * aX + b[2] * bX,
+  ];
+}
+
+const RECT_COLORS: ReadonlyArray<Color> = [
+  [ 255, 0, 0 ],
+  [ 0, 0, 255 ],
+  [ 0, 255, 0 ],
+];
+
+export function rectColor(confidence: number): Color {
+  const first = (confidence * (RECT_COLORS.length - 1)) | 0;
+  const second = first + 1;
+
+  if (first === RECT_COLORS.length - 1) {
+    return RECT_COLORS[first];
+  }
+
+  return interpolateColor(RECT_COLORS[first], RECT_COLORS[second],
+      confidence * (RECT_COLORS.length - 1) - first);
 }

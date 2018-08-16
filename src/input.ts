@@ -4,7 +4,7 @@ import jimp = require('jimp');
 
 import {
   Polygon, IPoint, IOrientedRect, polygonToRect, rotate,
-  vector, norm, polygonCenter,
+  vector, norm, polygonCenter, rectColor,
 } from './utils';
 
 export const TARGET_WIDTH = 416;
@@ -260,17 +260,20 @@ export class Input {
       }).join(' ');
 
       const confidence = rect.confidence === undefined ? 1 : rect.confidence;
-      const alpha = Math.exp(-1 / (confidence + 1e-18)) / Math.exp(-1);
 
-      const color = confidence < 0.5 ?
-          `rgba(255,0,0,${alpha})` :
-          `rgba(0,255,0,${alpha})`;
+      function computeAlpha(x: number): number {
+        return Math.exp(1 - 1 / (x + 1e-18));
+      }
 
-      const fillColor = confidence < 0.5 ? 'none' :
-        `rgba(0,255,0,${alpha / 2})`;
+      const alpha = computeAlpha(confidence);
+      const fillAlpha = computeAlpha(Math.max(0, confidence - 0.5));
 
-      return `<polygon points="${points}" fill="${fillColor}" ` +
-        `stroke="${color}"/>`;
+      const color = rectColor(confidence);
+
+      const stroke = `rgba(${color.join(',')},${alpha})`;
+      const fill = `rgba(${color.join(',')},${fillAlpha})`;
+
+      return `<polygon points="${points}" fill="${fill}" stroke="${stroke}"/>`;
     });
 
     return `
