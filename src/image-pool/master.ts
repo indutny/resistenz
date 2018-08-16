@@ -32,7 +32,11 @@ export class Master {
         const callback = this.callbacks.get(msg.seq)!;
         this.callbacks.delete(msg.seq);
 
-        const image = await jimp.read(Buffer.from(msg.image, 'base64'));
+        const image = new jimp({
+          width: msg.width,
+          height: msg.height,
+          data: Buffer.from(msg.image, 'base64'),
+        });
         callback(new Input(image, msg.polys));
       });
     }
@@ -46,18 +50,25 @@ export class Master {
 
       this.callbacks.set(seq, resolve);
 
-      let maybeImage: string | undefined = undefined;
-      let maybePolys: ReadonlyArray<Polygon> | undefined = undefined;
+      let maybeImage: string | undefined;
+      let maybeWidth: number | undefined;
+      let maybeHeight: number | undefined;
+      let maybePolys: ReadonlyArray<Polygon> | undefined;
       if (!worker.images.has(index)) {
         const input = this.images[index];
-        const buffer = await input.image.getBufferAsync(jimp.MIME_PNG);
-        maybeImage = buffer.toString('base64');
+        const bitmap = input.image.bitmap;
+
+        maybeWidth = bitmap.width;
+        maybeHeight = bitmap.height;
+        maybeImage = bitmap.data.toString('base64');
         maybePolys = input.polys;
       }
 
       worker.proc.send({
         seq,
         index,
+        width: maybeWidth,
+        height: maybeHeight,
         image: maybeImage,
         polys: maybePolys,
       });

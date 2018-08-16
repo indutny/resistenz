@@ -10,7 +10,11 @@ process.on('message', async (msg) => {
   if (images.has(msg.index)) {
     input = images.get(msg.index)!;
   } else {
-    const image = await jimp.read(Buffer.from(msg.image, 'base64'));
+    const image = new jimp({
+      width: msg.width,
+      height: msg.height,
+      data: Buffer.from(msg.image, 'base64'),
+    });
     input = new Input(image, msg.polys);
 
     images.set(msg.index, input);
@@ -18,11 +22,13 @@ process.on('message', async (msg) => {
 
   const random = input.randomize();
 
-  const buffer = await random.image.getBufferAsync(jimp.MIME_PNG);
+  const bitmap = random.image.bitmap;
 
   process.send!({
     seq: msg.seq,
-    image: buffer.toString('base64'),
+    width: bitmap.width,
+    height: bitmap.height,
+    image: bitmap.data.toString('base64'),
     polys: random.polys,
   });
 });
