@@ -121,7 +121,7 @@ async function train() {
   }
 
   // Shared training data
-  const trainInputs = [];
+  const trainInputs: Input[] = [];
 
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 10) {
