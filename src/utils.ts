@@ -134,6 +134,7 @@ function interpolateColor(a: Color, b: Color, x: number): Color {
 }
 
 const RECT_COLORS: ReadonlyArray<Color> = [
+  [ 255, 255, 255 ],
   [ 255, 0, 0 ],
   [ 0, 0, 255 ],
   [ 0, 255, 0 ],

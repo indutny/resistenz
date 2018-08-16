@@ -161,6 +161,8 @@ async function train() {
         batch.map((input) => input.toTrainingPair()));
 
       const history = await m.model.fit(batchTensor.image, batchTensor.grid, {
+        shuffle: false,
+
         initialEpoch: epoch,
         batchSize: batch.length,
         epochs: epoch + 1,
