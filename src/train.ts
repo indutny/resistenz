@@ -17,7 +17,7 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
-const AUGMENT_TOTAL = 64;
+const AUGMENT_TOTAL = 256;
 
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
