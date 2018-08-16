@@ -24,7 +24,7 @@ const USE_NESTEROV = true;
 export class Model {
   public readonly model: tf.Sequential;
 
-  constructor(mobilenet: tf.Model) {
+  constructor() {
     const model = tf.sequential();
 
     // Just a no-op to specify input layer shape

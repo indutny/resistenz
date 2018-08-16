@@ -115,14 +115,16 @@ function disposeTensorify(result: ITensorifyResult) {
 }
 
 async function train() {
-  const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
+  // const mobilenet = await tf.loadModel(`file://${MOBILE_NET}`);
 
-  const m = new Model(mobilenet);
+  const m = new Model();
   const dataset = await load();
 
   const pool = new ImagePool(dataset.train);
 
   const trainSrc = dataset.train;
+
+  console.log(`Validate count: ${dataset.validate.length}`);
 
   const validateSrc = dataset.validate
     .map((val) => val.resize());
@@ -175,6 +177,16 @@ async function train() {
     process.stdout.write('\n');
     console.timeEnd('fit');
     console.log(`losses=${JSON.stringify(losses)}`);
+
+    const valLoss = await m.model.evaluate(validation.all.image,
+                                           validation.all.grid, {
+      batchSize: 10,
+    });
+    if (Array.isArray(valLoss) && valLoss.length > 0) {
+      const loss = await valLoss[0].data();
+      console.log(`val_loss=${loss[0]}`);
+    }
+    tf.dispose(valLoss);
 
     {
       const src = trainSrc[(Math.random() * trainSrc.length) | 0].resize();
