@@ -26,11 +26,11 @@ interface ITensorifyResult {
 
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
-    list: Input[], minPercent: number = 0.25) {
+    list: Input[], minPercent: number = 0.01) {
 
-  const targetSize = AUGMENT_TOTAL;
-  const minCount =
-      Math.max(targetSize - list.length, list.length * minPercent) | 0;
+  const targetSize = Math.min(src.length, AUGMENT_TOTAL);
+  const minCount = Math.min(targetSize,
+      Math.max(targetSize - list.length, Math.ceil(list.length * minPercent)));
 
   // Add random entries
   let done = 0;
@@ -118,7 +118,9 @@ async function train() {
   console.timeEnd('validation tensorify');
 
   async function predict(file: string, input: Input, entry: ITensorifyResult) {
-    const prediction = await (m.model.predict(entry.image) as tf.Tensor).data();
+    const predictionTensor = m.model.predict(entry.image) as tf.Tensor;
+    const prediction = await predictionTensor.data();
+    predictionTensor.dispose();
 
     let rects = input.predictionToRects(prediction, GRID_DEPTH, 0.2);
     let svg = await input.toSVG(rects);
@@ -133,7 +135,7 @@ async function train() {
   const trainInputs: Input[] = [];
 
   console.log('Running fit');
-  for (let epoch = 1; epoch < 1000000; epoch += 10) {
+  for (let epoch = 1; epoch < 1000000; epoch += 1) {
     console.log('Epoch %d', epoch);
 
     console.log('Randomizing training data... [%d]', trainSrc.length);
@@ -156,8 +158,8 @@ async function train() {
       training.all.grid,
       {
         initialEpoch: epoch,
-        batchSize: 10,
-        epochs: epoch + 10,
+        batchSize: 1,
+        epochs: epoch + 1,
         validationData: validateSrc.length >= 1 ?
           [ validation.all.image, validation.all.grid ] : undefined,
         callbacks: {
