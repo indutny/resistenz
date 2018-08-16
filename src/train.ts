@@ -22,11 +22,14 @@ interface ITensorifyResult {
   readonly grid: tf.Tensor;
 }
 
+type Batch = ReadonlyArray<Input>;
+
 async function *augmentTrain(
     pool: ImagePool,
     list: Input[],
     batchSize: number = 10,
-    minPercent: number = 0.2) {
+    minPercent: number = 0.2,
+    maxParallelBatches: number = 4) {
   const replacements: Set<number> = new Set();
 
   if (list.length === 0) {
@@ -60,11 +63,13 @@ async function *augmentTrain(
 
   const previous = list.slice();
 
+  const pendingBatches: Array<Promise<Batch>> = [];
+
   let fillIndex = 0;
   for (let i = 0; i < indices.length; i += batchSize) {
     const batch = indices.slice(i, i + batchSize);
 
-    yield await Promise.all(batch.map(async (index) => {
+    pendingBatches.push(Promise.all(batch.map(async (index) => {
       let res: Input;
       if (replacements.has(index)) {
         res = await pool.randomize(index);
@@ -75,7 +80,15 @@ async function *augmentTrain(
       list[fillIndex++] = res;
 
       return res;
-    }));
+    })));
+
+    if (pendingBatches.length >= maxParallelBatches) {
+      yield await pendingBatches.shift()!;
+    }
+  }
+
+  while (pendingBatches.length > 0) {
+    yield await pendingBatches.shift()!;
   }
 }
 
@@ -151,6 +164,7 @@ async function train() {
 
   // Shared training data
   let trainInputs: Input[] = [];
+  let iterator: AsyncIterableIterator<Batch> | undefined;
 
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 1) {
@@ -158,7 +172,11 @@ async function train() {
 
     console.time('fit');
     const losses: number[] = [];
-    for await (const batch of augmentTrain(pool, trainInputs)) {
+
+    if (!iterator) {
+      iterator = augmentTrain(pool, trainInputs);
+    }
+    for await (const batch of iterator!) {
       const batchTensor = tensorify(
         batch.map((input) => input.toTrainingPair()));
 
@@ -174,6 +192,10 @@ async function train() {
       losses.push((history.history.loss as number[])[0]);
       disposeTensorify(batchTensor);
     }
+
+    // Restart iterator as soon as possible
+    iterator = augmentTrain(pool, trainInputs);
+
     process.stdout.write('\n');
     console.timeEnd('fit');
     console.log(`losses=${JSON.stringify(losses)}`);
