@@ -16,6 +16,7 @@ export class Master {
   private seq: number = 0;
   private workers: IWorker[] = [];
   private readonly callbacks: Map<number, (input: Input) => void> = new Map();
+  private readonly history: Map<number, Input> = new Map();
 
   public readonly size: number;
 
@@ -37,7 +38,10 @@ export class Master {
           height: msg.height,
           data: Buffer.from(msg.image, 'base64'),
         });
-        callback(new Input(image, msg.polys));
+
+        const input = new Input(image, msg.polys);
+        this.history.set(msg.index, input);
+        callback(input);
       });
     }
   }
@@ -75,6 +79,14 @@ export class Master {
 
       worker.images.add(index);
     });
+  }
+
+  public async getLast(index: number): Promise<Input>{
+    if (this.history.has(index)) {
+      return this.history.get(index)!;
+    }
+
+    return await this.randomize(index);
   }
 
   public close() {

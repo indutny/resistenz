@@ -26,6 +26,7 @@ process.on('message', async (msg) => {
 
   process.send!({
     seq: msg.seq,
+    index: msg.index,
     width: bitmap.width,
     height: bitmap.height,
     image: bitmap.data.toString('base64'),

@@ -26,25 +26,18 @@ type Batch = ReadonlyArray<Input>;
 
 async function *augmentTrain(
     pool: ImagePool,
-    list: Input[],
     batchSize: number = 10,
     minPercent: number = 0.2,
     maxParallelBatches: number = 4) {
   const replacements: Set<number> = new Set();
 
-  if (list.length === 0) {
-    for (let i = 0; i < pool.size; i++) {
-      replacements.add(i);
-    }
-  } else {
-    const minCount = Math.ceil(list.length * minPercent);
-    for (let i = 0; i < minCount; i++) {
-      let index: number;
-      do {
-        index = (Math.random() * pool.size) | 0;
-      } while (replacements.has(index));
-      replacements.add(index);
-    }
+  const minCount = Math.ceil(pool.size * minPercent);
+  for (let i = 0; i < minCount; i++) {
+    let index: number;
+    do {
+      index = (Math.random() * pool.size) | 0;
+    } while (replacements.has(index));
+    replacements.add(index);
   }
 
   // Shuffle
@@ -61,10 +54,7 @@ async function *augmentTrain(
     indices[j] = t;
   }
 
-  const previous = list.slice();
-
   const pendingBatches: Array<Promise<Batch>> = [];
-
   let fillIndex = 0;
   for (let i = 0; i < indices.length; i += batchSize) {
     const batch = indices.slice(i, i + batchSize);
@@ -74,10 +64,8 @@ async function *augmentTrain(
       if (replacements.has(index)) {
         res = await pool.randomize(index);
       } else {
-        res = previous[index];
+        res = await pool.getLast(index);
       }
-
-      list[fillIndex++] = res;
 
       return res;
     })));
@@ -162,8 +150,6 @@ async function train() {
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
 
-  // Shared training data
-  let trainInputs: Input[] = [];
   let iterator: AsyncIterableIterator<Batch> | undefined;
 
   console.log('Running fit');
@@ -174,7 +160,7 @@ async function train() {
     const losses: number[] = [];
 
     if (!iterator) {
-      iterator = augmentTrain(pool, trainInputs);
+      iterator = augmentTrain(pool);
     }
     for await (const batch of iterator!) {
       const batchTensor = tensorify(
@@ -194,7 +180,7 @@ async function train() {
     }
 
     // Restart iterator as soon as possible
-    iterator = augmentTrain(pool, trainInputs);
+    iterator = augmentTrain(pool);
 
     process.stdout.write('\n');
     console.timeEnd('fit');
