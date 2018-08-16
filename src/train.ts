@@ -22,18 +22,19 @@ interface ITensorifyResult {
   readonly grid: tf.Tensor;
 }
 
-async function augmentTrain(
+async function *augmentTrain(
     pool: ImagePool,
-    previous: ReadonlyArray<Input>,
-    minPercent: number = 0.2): Promise<ReadonlyArray<Input>> {
+    list: Input[],
+    batchSize: number = 10,
+    minPercent: number = 0.2) {
   const replacements: Set<number> = new Set();
 
-  if (previous.length === 0) {
+  if (list.length === 0) {
     for (let i = 0; i < pool.size; i++) {
       replacements.add(i);
     }
   } else {
-    const minCount = Math.ceil(previous.length * minPercent);
+    const minCount = Math.ceil(list.length * minPercent);
     for (let i = 0; i < minCount; i++) {
       let index: number;
       do {
@@ -57,27 +58,24 @@ async function augmentTrain(
     indices[j] = t;
   }
 
-  let done = 0;
-  return await Promise.all(indices.map(async (index) => {
-    let res: Input;
-    if (replacements.has(index)) {
-      res = await pool.randomize(index);
-    } else {
-      res = pool.get(index);
-    }
+  const previous = list.slice();
 
-    done++;
-    if (done % 100 === 0 || done === pool.size) {
-      console.log(`${done}/${pool.size}`);
-    }
+  let fillIndex = 0;
+  for (let i = 0; i < indices.length; i += batchSize) {
+    const batch = indices.slice(i, i + batchSize);
 
-    return res;
-  }));
-}
+    yield await Promise.all(batch.map(async (index) => {
+      let res: Input;
+      if (replacements.has(index)) {
+        res = await pool.randomize(index);
+      } else {
+        res = previous[index];
+      }
 
-function *batchify<T>(list: ReadonlyArray<T>, batchSize: number = 10) {
-  for (let i = 0; i < list.length; i += batchSize) {
-    yield list.slice(i, i + batchSize);
+      list[fillIndex++] = res;
+
+      return res;
+    }));
   }
 }
 
@@ -150,19 +148,15 @@ async function train() {
   }
 
   // Shared training data
-  let trainInputs: ReadonlyArray<Input> = [];
+  let trainInputs: Input[] = [];
 
   console.log('Running fit');
   for (let epoch = 1; epoch < 1000000; epoch += 1) {
     console.log('Epoch %d', epoch);
 
-    console.log('Randomizing training data... [%d]', trainSrc.length);
-    console.time('randomize');
-    trainInputs = await augmentTrain(pool, trainInputs);
-    console.timeEnd('randomize');
-
     console.time('fit');
-    for (const batch of batchify(trainInputs)) {
+    const losses: number[] = [];
+    for await (const batch of augmentTrain(pool, trainInputs)) {
       const batchTensor = tensorify(
         batch.map((input) => input.toTrainingPair()));
 
@@ -173,11 +167,12 @@ async function train() {
       });
       process.stdout.write('.');
 
-      console.log(history);
+      losses.push((history.history.loss as number[])[0]);
       disposeTensorify(batchTensor);
     }
     process.stdout.write('\n');
     console.timeEnd('fit');
+    console.log(`losses=${JSON.stringify(losses)}`);
 
     {
       const src = trainSrc[(Math.random() * trainSrc.length) | 0];

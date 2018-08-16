@@ -38,10 +38,6 @@ export class Master {
     }
   }
 
-  public get(index: number): Input {
-    return this.images[index];
-  }
-
   public async randomize(index: number): Promise<Input> {
     return new Promise<Input>(async (resolve) => {
       const worker = this.workers[index % this.workers.length];
