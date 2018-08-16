@@ -91,6 +91,11 @@ function tensorify(pairs: ReadonlyArray<ITrainingPair>): ITensorifyResult {
   };
 }
 
+function disposeTensorify(result: ITensorifyResult) {
+  tf.dispose(result.image);
+  tf.dispose(result.grid);
+}
+
 async function train() {
   const pool = new ImagePool();
 
@@ -179,16 +184,16 @@ async function train() {
     await m.model.save(`file://${SAVE_FILE}`);
 
     // Clean-up memory?
-    tf.dispose(training.single);
-    tf.dispose(training.all);
+    disposeTensorify(training.single);
+    disposeTensorify(training.all);
   }
 
 
   // Clean-up memory?
   if (validation.single) {
-    tf.dispose(validation.single);
+    disposeTensorify(validation.single);
   }
-  tf.dispose(validation.all);
+  disposeTensorify(validation.all);
 
   pool.close();
 }
