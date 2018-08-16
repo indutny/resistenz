@@ -148,7 +148,7 @@ async function train() {
     const train = trainInputs.map((input) => input.toTrainingPair());
     const training = {
       all: tensorify(train),
-      single: tensorify([ train[train.length - 1] ]),
+      single: tensorify([ train[0] ]),
     };
     console.timeEnd('tensorify');
 
@@ -170,12 +170,10 @@ async function train() {
             process.stdout.write('\n');
             console.log('epoch %d end %j', epoch, logs);
 
-            await predict('train', trainInputs[trainInputs.length - 1],
-              training.single);
+            await predict('train', trainInputs[0], training.single);
 
             if (validateSrc.length >= 1) {
-              await predict('validate', validateSrc[0],
-                validation.single!);
+              await predict('validate', validateSrc[0], validation.single!);
             }
           },
         },
