@@ -36,7 +36,7 @@ export class Input {
   }
 
   private random(): number {
-    return 0.0;
+    return Math.random();
   }
 
   public randomize(): Input {
