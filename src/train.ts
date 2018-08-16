@@ -112,8 +112,6 @@ async function train() {
   console.time('validation tensorify');
   const validation = {
     all: tensorify(validateSrc.map((input) => input.toTrainingPair())),
-    single: validateSrc.length ?
-      tensorify([ validateSrc[0].toTrainingPair() ]) : undefined,
   };
   console.timeEnd('validation tensorify');
 
@@ -173,7 +171,10 @@ async function train() {
             await predict('train', trainInputs[0], training.single);
 
             if (validateSrc.length >= 1) {
-              await predict('validate', validateSrc[0], validation.single!);
+              const src = validateSrc[(Math.random() * validateSrc.length) | 0];
+              const single = tensorify([ src.toTrainingPair() ]);
+              await predict('validate', src, single);
+              single.dispose();
             }
           },
         },
@@ -190,9 +191,6 @@ async function train() {
 
 
   // Clean-up memory?
-  if (validation.single) {
-    disposeTensorify(validation.single);
-  }
   disposeTensorify(validation.all);
 
   pool.close();
