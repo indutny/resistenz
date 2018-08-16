@@ -201,7 +201,7 @@ async function train() {
     tf.dispose(valLoss);
 
     {
-      const src = trainSrc[(Math.random() * trainSrc.length) | 0].resize();
+      const src = await pool.getLast((Math.random() * pool.size.length) | 0);
       const single = tensorify([ src.toTrainingPair() ]);
       await predict('train', src, single);
       disposeTensorify(single);
