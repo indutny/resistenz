@@ -17,7 +17,7 @@ const LAMBDA_COORD = 5;
 
 const IOU_THRESHOLD = 0.7;
 
-const LR = 1e-3;
+const LR = 1e-2;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
