@@ -67,7 +67,6 @@ export class Model {
       model.add(tf.layers.conv2d({
         kernelSize: kernel,
         filters,
-        padding: 'same',
       }));
 
       model.add(tf.layers.batchNormalization({}));

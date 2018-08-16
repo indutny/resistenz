@@ -48,6 +48,7 @@ async function randomizeInputs(pool: ImagePool, src: ReadonlyArray<Input>) {
   let done = 0;
   return Promise.all(src.map(async (input) => {
     const res = await pool.randomize(input);
+    done++;
     if (done % 100 === 0 || done === src.length) {
       console.log(`${done}/${src.length}`);
     }
