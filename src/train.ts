@@ -26,7 +26,7 @@ interface ITensorifyResult {
 
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
-    list: Input[], minPercent: number = 0.01) {
+    list: Input[], minPercent: number = 0.02) {
 
   const targetSize = Math.min(src.length, AUGMENT_TOTAL);
   const minCount = Math.min(targetSize,
