@@ -156,7 +156,7 @@ async function train() {
       training.all.targetGrid,
       {
         initialEpoch: epoch,
-        batchSize: 32,
+        batchSize: 10,
         epochs: epoch + 100,
         validationData: validateSrc.length >= 1 ?
           [ validation.all.image, validation.all.targetGrid ] : undefined,
