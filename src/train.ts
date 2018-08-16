@@ -175,7 +175,7 @@ async function train() {
     console.log(`losses=${JSON.stringify(losses)}`);
 
     {
-      const src = trainSrc[(Math.random() * trainSrc.length) | 0];
+      const src = trainSrc[(Math.random() * trainSrc.length) | 0].resize();
       const single = tensorify([ src.toTrainingPair() ]);
       await predict('train', src, single);
       disposeTensorify(single);
