@@ -19,6 +19,11 @@ const MOBILE_NET =
 
 const AUGMENT_TOTAL = 256;
 
+interface ITensorifyResult {
+  readonly image: tf.Tensor;
+  readonly grid: tf.Tensor;
+}
+
 async function augmentTrain(pool: ImagePool,
     src: ReadonlyArray<Input>,
     list: Input[], minPercent: number = 0.25) {
@@ -56,7 +61,7 @@ async function randomizeInputs(pool: ImagePool, src: ReadonlyArray<Input>) {
   }));
 }
 
-function tensorify(pairs: ReadonlyArray<ITrainingPair>) {
+function tensorify(pairs: ReadonlyArray<ITrainingPair>): ITensorifyResult {
   const xs = new Float32Array(
     pairs.length * TARGET_WIDTH * TARGET_HEIGHT * TARGET_CHANNELS);
   const ys = new Float32Array(
@@ -78,7 +83,7 @@ function tensorify(pairs: ReadonlyArray<ITrainingPair>) {
 
   return {
     image,
-    targetGrid: tf.tidy(() => {
+    grid: tf.tidy(() => {
       const shallow = tf.tensor(ys, [
           pairs.length, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS ]);
       return shallow.tile([ 1, 1, 1, GRID_DEPTH, 1 ]);
@@ -107,15 +112,14 @@ async function train() {
   };
   console.timeEnd('validation tensorify');
 
-  async function predict(file: string, input: Input,
-                         image: tf.Tensor, grid: tf.Tensor) {
-    const prediction = await (m.model.predict(image) as tf.Tensor).data();
+  async function predict(file: string, input: Input, entry: ITensorifyResult) {
+    const prediction = await (m.model.predict(entry.image) as tf.Tensor).data();
 
     let rects = input.predictionToRects(prediction, GRID_DEPTH, 0.2);
     let svg = await input.toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}.svg`), svg);
 
-    rects = input.predictionToRects(await grid.data(), GRID_DEPTH);
+    rects = input.predictionToRects(await entry.grid.data(), GRID_DEPTH);
     svg = await input.toSVG(rects);
     fs.writeFileSync(path.join(IMAGE_DIR, `${file}_ground.svg`), svg);
   }
@@ -144,13 +148,13 @@ async function train() {
     console.time('fit');
     const history = await m.model.fit(
       training.all.image,
-      training.all.targetGrid,
+      training.all.grid,
       {
         initialEpoch: epoch,
         batchSize: 10,
         epochs: epoch + 10,
         validationData: validateSrc.length >= 1 ?
-          [ validation.all.image, validation.all.targetGrid ] : undefined,
+          [ validation.all.image, validation.all.grid ] : undefined,
         callbacks: {
           onBatchEnd: async () => {
             process.stdout.write('.');
@@ -160,11 +164,11 @@ async function train() {
             console.log('epoch %d end %j', epoch, logs);
 
             await predict('train', trainInputs[trainInputs.length - 1],
-              training.single.image, training.single.targetGrid);
+              training.single);
 
             if (validateSrc.length >= 1) {
               await predict('validate', validateSrc[0],
-                validation.single!.image, validation.single!.targetGrid);
+                validation.single!);
             }
           },
         },
