@@ -179,7 +179,7 @@ async function train() {
     console.log(`losses=${JSON.stringify(losses)}`);
 
     let valLoss = await m.model.evaluate(validation.all.image,
-                                           validation.all.grid, {
+                                         validation.all.grid, {
       batchSize: 10,
     });
     if (!Array.isArray(valLoss)) {
