@@ -206,8 +206,11 @@ export class Model {
           .sum(-1).sum(-1).div(objCount)
           .mul(tf.scalar(LAMBDA_COORD));
 
-      const weights = this.model.trainableWeights.map(
-          (weight) => weight.read().cast('float32'));
+      const weights = this.model.trainableWeights.filter((weight) => {
+        return /conv2d/.test(weight.name);
+      }).map((weight) => {
+        return weight.read().cast('float32');
+      });
       const decayLoss = weights.reduce((acc, weight) => {
         return acc.add(weight.square().mean());
       }, tf.scalar(0)).mul(tf.scalar(WEIGHT_DECAY / 2));
