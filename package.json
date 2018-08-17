@@ -24,6 +24,6 @@
     "ts-node": "^7.0.0"
   },
   "optionalDependencies": {
-    "@tensorflow/tfjs-node-gpu": "^0.1.13",
+    "@tensorflow/tfjs-node-gpu": "^0.1.13"
   }
 }
