@@ -27,7 +27,7 @@ type Batch = ReadonlyArray<Input>;
 async function *augmentTrain(
     pool: ImagePool,
     batchSize: number = 10,
-    minPercent: number = 0.2,
+    minPercent: number = 0.05,
     maxParallelBatches: number = 4) {
   const replacements: Set<number> = new Set();
 
