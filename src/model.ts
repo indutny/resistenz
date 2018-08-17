@@ -11,8 +11,7 @@ import { MobileNetLayer } from './layers/mobilenet';
 export const GRID_DEPTH = 5;
 
 const LAMBDA_OBJ = 1;
-const LAMBDA_NO_OBJ_LOCAL = 0.5;
-const LAMBDA_NO_OBJ_GLOBAL = 0.5;
+const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_COORD = 5;
 
 const IOU_THRESHOLD = 0.7;
@@ -175,22 +174,21 @@ export class Model {
 
       // Find masks for object presence (`x` is a ground truth)
       const hasObject = x.confidence.mul(onMask);
-      const noObjectLocal = tf.scalar(1).sub(onMask).mul(x.confidence);
-      const noObjectGlobal = tf.scalar(1).sub(onMask)
-        .mul(tf.scalar(1).sub(x.confidence));
+      const noObject = tf.scalar(1).sub(hasObject);
+
+      const objCount = hasObject.sum(-1).sum(-1).sum(-1).add(epsilon);
+      const noObjCount = noObject.sum(-1).sum(-1).sum(-1).add(epsilon)
 
       // Compute losses
       const objLoss = tf.squaredDifference(tf.scalar(1), y.confidence)
           .mul(hasObject).sum(-1)
+          .sum(-1).sum(-1).div(objCount)
           .mul(tf.scalar(LAMBDA_OBJ));
 
-      const noObjLocalLoss = y.confidence.square()
-          .mul(noObjectLocal).sum(-1)
-          .mul(tf.scalar(LAMBDA_NO_OBJ_LOCAL));
-
-      const noObjGlobalLoss = y.confidence.square()
-          .mul(noObjectGlobal).sum(-1)
-          .mul(tf.scalar(LAMBDA_NO_OBJ_GLOBAL));
+      const noObjLoss = y.confidence.square()
+          .mul(noObject).sum(-1)
+          .sum(-1).sum(-1).div(noObjCount)
+          .mul(tf.scalar(LAMBDA_NO_OBJ));
 
       const centerLoss =
           tf.squaredDifference(x.box.center, y.box.center).sum(-1);
@@ -200,9 +198,10 @@ export class Model {
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
           .mul(hasObject).sum(-1)
+          .sum(-1).sum(-1).div(objCount)
           .mul(tf.scalar(LAMBDA_COORD));
 
-      return objLoss.add(noObjLocalLoss).add(noObjGlobalLoss).add(boxLoss);
+      return objLoss.add(noObjLoss).add(boxLoss);
     });
   }
 }
