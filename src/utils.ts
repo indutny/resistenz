@@ -127,9 +127,9 @@ function interpolateColor(a: Color, b: Color, x: number): Color {
   const bX = x;
 
   return [
-    a[0] * aX + b[0] * bX,
-    a[1] * aX + b[1] * bX,
-    a[2] * aX + b[2] * bX,
+    Math.round(a[0] * aX + b[0] * bX),
+    Math.round(a[1] * aX + b[1] * bX),
+    Math.round(a[2] * aX + b[2] * bX),
   ];
 }
 

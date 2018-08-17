@@ -270,8 +270,9 @@ export class Input {
 
       const color = rectColor(confidence);
 
-      const stroke = `rgba(${color.join(',')},${alpha})`;
-      const fill = `rgba(${color.join(',')},${fillAlpha})`;
+      const stroke = `rgba(${color.join(',')},${alpha.toFixed(3)})`;
+      const fill = fillAlpha < 0.01 ? 'none' :
+        `rgba(${color.join(',')},${fillAlpha.toFixed(3)})`;
 
       return `<polygon points="${points}" fill="${fill}" stroke="${stroke}"/>`;
     });
