@@ -201,10 +201,8 @@ export class Input {
       grid[gridOff + 0] = cx;
       grid[gridOff + 1] = cy;
 
-      const width = scaledRect.width;
-      const height = scaledRect.height;
-      assert(0 <= width && width <= 1, '`width` out of bounds');
-      assert(0 <= height && height <= 1, '`height` out of bounds');
+      const width = Math.min(1, Math.max(0, scaledRect.width));
+      const height = Math.min(1, Math.max(0, scaledRect.height));
 
       grid[gridOff + 2] = width;
       grid[gridOff + 3] = height;
