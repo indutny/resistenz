@@ -15,8 +15,8 @@ export class Noise extends tf.layers.Layer {
         return inputs;
       }
 
-      const noise = tf.randomNormal(inputs.shape, 0, 0.2).mul(
-          kwargs.training.cast('float32'));
+      const noise = tf.randomNormal(inputs.shape, 0, 0.2)
+        .mul(tf.scalar(NOISE_LEVEL));
 
       return inputs.add(noise);
     });
