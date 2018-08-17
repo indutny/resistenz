@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-node';
+
+try {
+  require('@tensorflow/tfjs-node-gpu');
+} catch (e) {
+  require('@tensorflow/tfjs-node');
+}
 
 import { load } from './dataset';
 import {

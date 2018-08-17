@@ -22,5 +22,8 @@
     "@types/node": "^10.5.7",
     "@types/node-fetch": "^2.1.2",
     "ts-node": "^7.0.0"
+  },
+  "optionalDependencies": {
+    "@tensorflow/tfjs-node-gpu": "^0.1.13",
   }
 }
