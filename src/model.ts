@@ -15,6 +15,8 @@ const LAMBDA_OBJ = 1;
 const LAMBDA_NO_OBJ = 0.5;
 const LAMBDA_COORD = 5;
 
+const WEIGHT_DECAY = 0.0005;
+
 const IOU_THRESHOLD = 0.7;
 
 const LR = 1e-2;
@@ -204,7 +206,13 @@ export class Model {
           .sum(-1).sum(-1).div(objCount)
           .mul(tf.scalar(LAMBDA_COORD));
 
-      return objLoss.add(noObjLoss).add(boxLoss);
+      const weights = this.model.trainableWeights.map(
+          (weight) => weight.read().cast('float32'));
+      const decayLoss = weights.reduce((acc, weight) => {
+        return acc.add(weight.square().mean());
+      }, tf.scalar(0)).mul(tf.scalar(WEIGHT_DECAY / 2));
+
+      return objLoss.add(noObjLoss).add(boxLoss).add(decayLoss);
     });
   }
 }
