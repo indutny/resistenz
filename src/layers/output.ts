@@ -29,12 +29,14 @@ export class Output extends tf.layers.Layer {
 
       const priorSizes = tf.tensor2d(PRIOR_SIZES.map(revSigmoid), [ depth, 2 ]);
 
+      const angleNorm = angle.square().sum(-1).sqrt().add(tf.scalar(1e-23));
+
       return tf.concat([
         tf.sigmoid(center),
 
         // Offset sigmoid
         tf.sigmoid(size.add(priorSizes)),
-        tf.softmax(angle, -1),
+        angle.div(angleNorm),
         tf.sigmoid(confidence),
       ], -1);
     });

@@ -111,13 +111,7 @@ export function polygonToRect(polygon: Polygon): IOrientedRect {
     angle += Math.PI;
   }
 
-  // Ensure that angle is always in 1st quadrant
-  if (angle >= Math.PI / 2) {
-    angle = angle - Math.PI / 2;
-    const t = width;
-    width = height;
-    height = t;
-  }
+  assert(width >= height);
 
   return { cx, cy, width, height, angle };
 }
