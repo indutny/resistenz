@@ -5,6 +5,7 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 
+import { Noise } from './layers/noise';
 import { Output, PRIOR_SIZES } from './layers/output';
 import { MobileNetLayer } from './layers/mobilenet';
 
@@ -31,6 +32,8 @@ export class Model {
       inputShape: [ TARGET_WIDTH, TARGET_HEIGHT, TARGET_CHANNELS ],
       activation: 'linear',
     }));
+
+    model.add(new Noise({}));
 
     // model.add(new MobileNetLayer(mobilenet));
 
