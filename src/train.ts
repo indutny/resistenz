@@ -26,7 +26,7 @@ type Batch = ReadonlyArray<Input>;
 
 async function *augmentTrain(
     pool: ImagePool,
-    batchSize: number = 10,
+    batchSize: number = 32,
     minPercent: number = 0.05,
     maxParallelBatches: number = 4) {
   const replacements: Set<number> = new Set();
@@ -188,7 +188,7 @@ async function train() {
 
     let valLoss = await m.model.evaluate(validation.all.image,
                                          validation.all.grid, {
-      batchSize: 10,
+      batchSize: 32,
     });
     if (!Array.isArray(valLoss)) {
       valLoss = [ valLoss ];
