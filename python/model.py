@@ -9,10 +9,10 @@ GRID_CHANNELS = 7
 # TODO(indutny): add angles (sizes are almost the same)
 PRIOR_SIZES = [
   [ 0.15653530649021333, 0.0697987945243159 ],
-  [ 0.15653530649021333, 0.0697987945243159 ],
+  [ 0.1683968620145891, 0.07056800049810737 ],
   [ 0.15653530649021333, 0.0697987945243159 ],
   [ 0.1683968620145891, 0.07056800049810737 ],
-  [ 0.1683968620145891, 0.07056800049810737 ],
+  [ 0.15653530649021333, 0.0697987945243159 ],
 ]
 
 class Model:
@@ -84,6 +84,13 @@ class Model:
 
       inactive_anchors = 1.0 - active_anchors
 
+      active_count = tf.reduce_sum(
+          tf.reduce_sum(tf.reduce_sum(active_anchors, axis=-1), axis=-1),
+          axis=-1, name='active_count') + 1e-29
+      inactive_count = tf.reduce_sum(
+          tf.reduce_sum(tf.reduce_sum(inactive_anchors, axis=-1), axis=-1),
+          axis=-1, name='inactive_count') + 1e-29
+
       # Confidence loss
       expected_confidence = active_anchors
 
@@ -99,7 +106,7 @@ class Model:
 
       # Coordinate loss
       center_loss = tf.reduce_mean(
-          (prediction['center'] - labels['center']) ** 2,
+          ((prediction['center'] - labels['center']) * GRID_SIZE) ** 2,
           axis=-1, name='center_loss')
       size_loss = tf.reduce_mean(
           (tf.sqrt(prediction['size']) - tf.sqrt(labels['size'])) ** 2,
@@ -109,6 +116,16 @@ class Model:
       coord_loss = self.lambda_coord * active_anchors * \
           (center_loss + size_loss + angle_loss)
       coord_loss = tf.reduce_sum(coord_loss, axis=-1)
+
+      # To batch losses
+      obj_loss = tf.reduce_sum(tf.reduce_sum(obj_loss, axis=-1), axis=-1)
+      no_obj_loss = tf.reduce_sum(tf.reduce_sum(no_obj_loss, axis=-1), axis=-1)
+      coord_loss = tf.reduce_sum(tf.reduce_sum(coord_loss, axis=-1), axis=-1)
+
+      # Normalize by active/inactive count
+      obj_loss /= active_count
+      no_obj_loss /= inactive_count
+      coord_loss /= active_count
 
       # To scalars
       obj_loss = tf.reduce_mean(obj_loss)
@@ -121,7 +138,8 @@ class Model:
       total_loss = obj_loss + no_obj_loss + coord_loss
 
       # Some metrics
-      mean_iou = tf.reduce_mean(iou)
+      mean_iou = tf.reduce_sum(tf.reduce_sum(iou * active_anchors, axis=-1) / \
+          (tf.reduce_sum(active_anchors) + 1e-23))
 
     # NOTE: create metrics outside of variable scope for clearer name
     metrics = [
@@ -167,6 +185,7 @@ class Model:
     confidence = tf.squeeze(confidence, axis=-1,
         name='{}_confidence'.format(name))
 
+    center /= GRID_SIZE
     half_size = size / 2.0
 
     return {
