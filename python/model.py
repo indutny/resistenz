@@ -37,6 +37,8 @@ class Model:
     with tf.variable_scope('resistenz', reuse=tf.AUTO_REUSE, values=[ image ]):
       x = image
 
+      # TODO(indutny): noise during training
+
       x = self.conv_bn(x, filters=16, size=3, name='1')
       x = self.max_pool(x, size=2, stride=2, name='1')
       x = self.conv_bn(x, filters=32, size=3, name='2')
@@ -64,10 +66,11 @@ class Model:
 
       return x
 
-
-  def loss(self, prediction, labels):
+  def loss_and_metrics(self, prediction, labels, tag='train'):
     with tf.variable_scope('resistenz_loss', reuse=False, \
         values=[ prediction, labels ]):
+      metrics = []
+
       prediction = self.parse_box(prediction, 'prediction')
       labels = self.parse_box(labels, 'labels')
 
@@ -119,8 +122,20 @@ class Model:
       no_obj_loss = tf.reduce_mean(no_obj_loss)
       coord_loss = tf.reduce_mean(coord_loss)
 
+      # TODO(indutny): weight decay
+
       # Total
-      return obj_loss + no_obj_loss + coord_loss
+      total_loss = obj_loss + no_obj_loss + coord_loss
+
+      metrics = [
+        tf.summary.scalar('{}/iou'.format(tag), tf.reduce_mean(iou)),
+        tf.summary.scalar('{}/obj_loss'.format(tag), obj_loss),
+        tf.summary.scalar('{}/no_obj_loss'.format(tag), no_obj_loss),
+        tf.summary.scalar('{}/coord_loss'.format(tag), coord_loss),
+        tf.summary.scalar('{}/loss'.format(tag), total_loss),
+      ]
+
+      return total_loss, tf.summary.merge(metrics)
 
   # Helpers
 

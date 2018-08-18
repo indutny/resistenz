@@ -17,6 +17,11 @@ with tf.Session() as sess:
 
   training, validation = dataset.load()
 
+  # Just a single image for epoch to save to SVG
+  training_single = training.batch(1).repeat()
+  validation_single = validation.batch(1).repeat()
+
+  # Real datasets and their iterators
   training = training.batch(32)
   validation = validation.batch(32)
 
@@ -26,11 +31,15 @@ with tf.Session() as sess:
   training_batch = training_iter.get_next()
   validation_batch = validation_iter.get_next()
 
+  # Predictions
   training_pred = model.forward(training_batch[0])
   validation_pred = model.forward(validation_batch[0])
 
-  training_loss = model.loss(training_pred, training_batch[1])
-  validation_loss = model.loss(validation_pred, validation_batch[1])
+  # Losses and metrics
+  training_loss, training_metrics = \
+      model.loss_and_metrics(training_pred, training_batch[1])
+  validation_loss, validation_metrics = \
+      model.loss_and_metrics(validation_pred, validation_batch[1])
 
   minimize = optimizer.minimize(training_loss, global_step)
 
@@ -43,7 +52,8 @@ with tf.Session() as sess:
     sess.run([ training_iter.initializer, validation_iter.initializer ])
     while True:
       try:
-        _, loss = sess.run([ minimize, training_loss ])
+        _, loss, metrics = \
+            sess.run([ minimize, training_loss, training_metrics ])
         print(loss)
       except tf.errors.OutOfRangeError:
         break
