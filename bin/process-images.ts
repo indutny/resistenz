@@ -26,7 +26,7 @@ class Image {
 
     let i = 0;
     for (const frame of frames) {
-      if (frame.width < TARGET_WIDTH || frame.height < TARGET_HEIGHT) {
+      if (frame.width < 2 * TARGET_WIDTH || frame.height < 2 * TARGET_HEIGHT) {
         continue;
       }
 
@@ -68,7 +68,7 @@ class Image {
     const json = JSON.stringify({ polygons: this.polygons });
 
     return Promise.all([
-      this.raw.write(file + '.jpg'),
+      this.raw.writeAsync(file + '.jpg'),
       promisify(fs.writeFile)(file + '.json', json)
     ]);
   }

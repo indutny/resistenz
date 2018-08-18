@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-IMAGE_SIZE = 416
 GRID_SIZE = 13
 GRID_DEPTH = 5
 GRID_CHANNELS = 7
@@ -14,11 +13,11 @@ PRIOR_SIZES = [
 ]
 
 class Model:
-  def __init__(self, prior_sizes=PRIOR_SIZES, iou_threshold=0.5,
+  def __init__(self, image_size, prior_sizes=PRIOR_SIZES, iou_threshold=0.5,
                lambda_obj=1.0, lambda_no_obj=0.5, lambda_coord=5.0):
     self.placeholders = {
       'image': tf.placeholder(tf.float32,
-        shape=(None, IMAGE_SIZE, IMAGE_SIZE, 3,), name='image'),
+        shape=(None, image_size, image_size, 3,), name='image'),
       'grid': tf.placeholder(tf.float32,
         shape=(None, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS,),
         name='grid'),

@@ -4,3 +4,4 @@ npm-debug.log
 images/*.svg
 saves/*
 !saves/.gitkeep
+__pycache__/
