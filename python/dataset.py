@@ -4,19 +4,21 @@ import numpy as np
 import os
 import json
 
-IMAGE_SIZE = 416
-MAX_CROP = 0.1
-GRID_SIZE = 13
-
 class Dataset:
-  def __init__(self, validate_split=0.15):
-    self.validate_split = 0.15
+  def __init__(self, image_size, grid_size, validate_split=0.15, max_crop=0.1,
+               saturation=0.5):
+    self.image_size = image_size
+    self.grid_size = grid_size
+    self.validate_split = validate_split
+
+    self.max_crop = max_crop
+    self.saturation = saturation
+
     self.images = [
         './dataset/processed/{}'.format(f)
         for f in os.listdir('./dataset/processed')
         if f.endswith('.jpg')
     ]
-    self.images = self.images[:1]
 
     self.polygons = []
     max_polys = 0
@@ -93,9 +95,23 @@ class Dataset:
     #
     # Resize all images to target size
     #
-    image = tf.image.resize_images(image, [ IMAGE_SIZE, IMAGE_SIZE ])
-    polygons = polygons * float(IMAGE_SIZE) / \
+    image = tf.image.resize_images(image, [ self.image_size, self.image_size ])
+    polygons = polygons * float(self.image_size) / \
         tf.cast(crop_size, dtype=tf.float32)
+
+    #
+    # Augment image
+    #
+    if training:
+      image = tf.image.random_saturation(image, 1.0 - self.saturation,
+          1.0 + self.saturation)
+      image = tf.image.rot90(image, tf.random_uniform([], 0, 4, dtype=tf.int32))
+
+    #
+    # Change image's type and value range
+    #
+    image = tf.cast(image, dtype=tf.float32)
+    image /= 255.0
     return image, self.polygons_to_grid(polygons)
 
   def load_single(self, images, polygons):
@@ -119,14 +135,14 @@ class Dataset:
   def polygons_to_grid(self, polygons):
     rects = self.polygons_to_rects(polygons)
 
-    cell_offsets = tf.linspace(0.0, 1.0 - 1 / GRID_SIZE, GRID_SIZE)
+    cell_offsets = tf.linspace(0.0, 1.0 - 1 / self.grid_size, self.grid_size)
     cell_offsets_x = tf.tile(tf.expand_dims(cell_offsets, axis=0),
-        [ GRID_SIZE, 1 ], name='cell_offsets_x')
+        [ self.grid_size, 1 ], name='cell_offsets_x')
     cell_offsets_y = tf.tile(tf.expand_dims(cell_offsets, axis=1),
-        [ 1, GRID_SIZE ], name='cell_offsets_y')
+        [ 1, self.grid_size ], name='cell_offsets_y')
 
     cell_starts = tf.stack([ cell_offsets_x, cell_offsets_y ], axis=2)
-    cell_ends = cell_starts + (1.0 / GRID_SIZE)
+    cell_ends = cell_starts + (1.0 / self.grid_size)
 
     cell_starts = tf.expand_dims(cell_starts, axis=2, name='cell_starts')
     cell_ends = tf.expand_dims(cell_ends, axis=2, name='cell_ends')
@@ -192,8 +208,8 @@ class Dataset:
     angle = tf.atan2(max_side[:, 1], max_side[:, 0])
     angle = tf.where(angle < 0.0, angle + math.pi, angle)
 
-    center /= IMAGE_SIZE
-    size /= IMAGE_SIZE
+    center /= float(self.image_size)
+    size /= float(self.image_size)
 
     rect_count = center.shape[0]
 

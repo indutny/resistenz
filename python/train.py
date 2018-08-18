@@ -1,9 +1,10 @@
 import tensorflow as tf
 
 from dataset import Dataset
+from model import IMAGE_SIZE, GRID_SIZE
 
 with tf.Session() as sess:
-  dataset = Dataset()
+  dataset = Dataset(image_size=IMAGE_SIZE, grid_size=GRID_SIZE)
 
   training, validation = dataset.load()
 

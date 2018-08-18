@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+IMAGE_SIZE = 416
+GRID_SIZE = 13
 GRID_DEPTH = 5
 GRID_CHANNELS = 7
 
