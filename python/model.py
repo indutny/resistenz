@@ -6,20 +6,14 @@ GRID_SIZE = 13
 GRID_DEPTH = 5
 GRID_CHANNELS = 7
 
-# TODO(indutny): add angles (sizes are almost the same)
-PRIOR_SIZES = [
-  [ 0.15653530649021333, 0.0697987945243159 ],
-  [ 0.1683968620145891, 0.07056800049810737 ],
-  [ 0.15653530649021333, 0.0697987945243159 ],
-  [ 0.1683968620145891, 0.07056800049810737 ],
-  [ 0.15653530649021333, 0.0697987945243159 ],
-]
+PRIOR_SIZE = [ 0.15653530649021333, 0.0697987945243159 ]
 
 class Model:
   def __init__(self,
-               prior_sizes=PRIOR_SIZES, iou_threshold=0.5,
+               prior_size=PRIOR_SIZE,
+               iou_threshold=0.5,
                lambda_obj=1.0, lambda_no_obj=0.5, lambda_coord=5.0):
-    self.prior_sizes = tf.constant(prior_sizes, dtype=tf.float32)
+    self.prior_size = tf.constant(prior_size, dtype=tf.float32)
     self.iou_threshold = iou_threshold
 
     self.lambda_obj = lambda_obj
@@ -173,7 +167,7 @@ class Model:
     center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
 
     center = tf.sigmoid(center)
-    size = tf.exp(size) * self.prior_sizes
+    size = tf.exp(size) * self.prior_size
     angle = tf.nn.l2_normalize(angle, axis=-1)
     confidence = tf.sigmoid(confidence)
 
