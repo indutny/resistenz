@@ -18,9 +18,8 @@ const LAMBDA_COORD = 5;
 
 const WEIGHT_DECAY = 0.0005;
 
-const IOU_THRESHOLD = 0.7;
+const IOU_THRESHOLD = 0.5;
 
-const LR = 1e-2;
 const MOMENTUM = 0.9;
 const USE_NESTEROV = true;
 
@@ -45,6 +44,7 @@ export class Model {
       model.add(tf.layers.conv2d({
         kernelSize: kernel,
         filters,
+        padding: 'same',
       }));
 
       model.add(tf.layers.batchNormalization({}));
@@ -71,6 +71,7 @@ export class Model {
       model.add(tf.layers.conv2d({
         kernelSize: kernel,
         filters,
+        padding: 'same',
       }));
 
       model.add(tf.layers.batchNormalization({}));
@@ -92,14 +93,16 @@ export class Model {
 
     model.add(new Output({}));
 
-    model.compile({
-      loss: (xs, ys) => this.loss(xs, ys),
-      optimizer: tf.train.momentum(LR, MOMENTUM, USE_NESTEROV),
-    });
-
     model.summary();
 
     this.model = model;
+  }
+
+  public setLR(lr: number) {
+    this.model.compile({
+      loss: (xs, ys) => this.loss(xs, ys),
+      optimizer: tf.train.momentum(lr, MOMENTUM, USE_NESTEROV),
+    });
   }
 
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
@@ -185,16 +188,20 @@ export class Model {
       const hasObject = x.confidence.mul(onMask);
       const noObject = tf.scalar(1).sub(hasObject);
 
+      const confDiff = tf.squaredDifference(
+          x.confidence.mul(hasObject),
+          y.confidence);
+
       // Compute losses
-      const objLoss = tf.squaredDifference(tf.scalar(1), y.confidence)
+      const objLoss = confDiff
           .mul(hasObject)
           .mul(tf.scalar(LAMBDA_OBJ));
 
-      const noObjLoss = y.confidence.square()
+      const noObjLoss = confDiff
           .mul(noObject)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
-      const confidenceLoss = objLoss.add(noObjLoss).mean(-1);
+      const confidenceLoss = objLoss.add(noObjLoss).sum(-1);
 
       // Normalize center to have same dimensionality as size
       const centerLoss = tf.squaredDifference(x.box.center, y.box.center)
@@ -204,7 +211,7 @@ export class Model {
         x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
       const boxLoss = centerLoss.add(sizeLoss).add(angleCosDiff)
-          .mul(hasObject).mean(-1)
+          .mul(hasObject).sum(-1)
           .mul(tf.scalar(LAMBDA_COORD));
 
       const weights = this.model.trainableWeights.filter((weight) => {

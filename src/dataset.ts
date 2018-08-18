@@ -25,7 +25,7 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
     return file.replace(/_.*$/, '');
   }
 
-  const hashes = Array.from(new Set(files.map(getFileHash)));
+  const hashes = Array.from(new Set(files.map(getFileHash))).slice(0, 1);
 
   const validateCount = (validateSplit * hashes.length) | 0;
 
@@ -43,7 +43,7 @@ export async function load(validateSplit: number = 0.1): Promise<IDataset> {
   }
 
   async function getInputs(hashes: ReadonlyArray<string>) {
-    const files = filterByHashes(hashes);
+    const files = filterByHashes(hashes).slice(0, 1);
     total += files.length;
 
     return await Promise.all(files.map(async (labelsFile) => {

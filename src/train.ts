@@ -22,6 +22,8 @@ const SAVE_FILE = path.join(SAVE_DIR, 'model');
 const MOBILE_NET =
     path.join(__dirname, '..', 'pretrained', 'mobilenet_224', 'model.json');
 
+const INITIAL_LR = 1e-3;
+
 interface ITensorifyResult {
   readonly image: tf.Tensor;
   readonly grid: tf.Tensor;
@@ -158,6 +160,7 @@ async function train() {
   let iterator: AsyncIterableIterator<Batch> | undefined;
 
   console.log('Running fit');
+  m.setLR(INITIAL_LR);
   for (let epoch = 1; epoch < 1000000; epoch += 1) {
     console.log('Epoch %d', epoch);
 
