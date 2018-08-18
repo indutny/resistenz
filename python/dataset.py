@@ -65,7 +65,7 @@ class Dataset:
 
   def process_image(self, image, polygons, training):
     image = tf.read_file(image)
-    image = tf.image.decode_jpeg(image)
+    image = tf.image.decode_jpeg(image, channels=3)
 
     size = tf.shape(image)[:2]
     width = size[1]

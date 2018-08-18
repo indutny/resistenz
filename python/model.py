@@ -15,14 +15,14 @@ PRIOR_SIZES = [
 ]
 
 class Model:
-  def __init__(self, image_size, grid_size,
+  def __init__(self,
                prior_sizes=PRIOR_SIZES, iou_threshold=0.5,
                lambda_obj=1.0, lambda_no_obj=0.5, lambda_coord=5.0):
     self.placeholders = {
       'image': tf.placeholder(tf.float32,
-        shape=(None, image_size, image_size, 3,), name='image'),
+        shape=(None, IMAGE_SIZE, IMAGE_SIZE, 3,), name='image'),
       'grid': tf.placeholder(tf.float32,
-        shape=(None, grid_size, grid_size, 1, GRID_CHANNELS,),
+        shape=(None, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS,),
         name='grid'),
     }
 
@@ -34,7 +34,7 @@ class Model:
     self.lambda_coord = lambda_coord
 
   def forward(self, image):
-    with tf.variable_scope('resistenz', reuse=True, values=[ image ]):
+    with tf.variable_scope('resistenz', reuse=tf.AUTO_REUSE, values=[ image ]):
       x = image
 
       x = self.conv_bn(x, filters=16, size=3, name='1')
@@ -81,8 +81,8 @@ class Model:
 
       iou *= abs_cos_diff
 
-      active_anchors = (iou > self.iou_threshold) or \
-          (iou == tf.reduce_max(iou, axis=-1, name='max_iou'))
+      active_anchors = tf.logical_or(iou > self.iou_threshold,
+          iou == tf.reduce_max(iou, axis=-1, name='max_iou'))
       active_anchors = tf.cast(active_anchors, dtype=tf.float32,
           name='active_anchors')
 
@@ -94,8 +94,9 @@ class Model:
       confidence_loss = \
           (prediction['confidence'] - expected_confidence) ** 2 / 2.0
 
-      obj_loss = tf.reduce_sum(self.lambda_obj * active_anchors * confidence_loss,
-          axis=-1, name='obj_loss')
+      obj_loss = tf.reduce_sum( \
+          self.lambda_obj * active_anchors * confidence_loss, axis=-1,
+          name='obj_loss')
       no_obj_loss = tf.reduce_sum( \
           self.lambda_no_obj * inactive_anchors * confidence_loss, axis=-1,
           name='no_obj_loss')
@@ -111,14 +112,15 @@ class Model:
 
       coord_loss = self.lambda_coord * active_anchors * \
           (center_loss + size_loss + angle_loss)
+      coord_loss = tf.reduce_sum(coord_loss, axis=-1)
 
       # To scalars
-      obj_loss = tf.reduce_mean(obj_loss, axis=-1)
-      no_obj_loss = tf.reduce_mean(no_obj_loss, axis=-1)
-      coord_loss = tf.reduce_mean(coord_loss, axis=-1)
+      obj_loss = tf.reduce_mean(obj_loss)
+      no_obj_loss = tf.reduce_mean(no_obj_loss)
+      coord_loss = tf.reduce_mean(coord_loss)
 
       # Total
-      return obj_loss.add(no_obj_loss).add(coord_loss)
+      return obj_loss + no_obj_loss + coord_loss
 
   # Helpers
 
@@ -135,7 +137,10 @@ class Model:
         padding='SAME')
 
   def output(self, x):
-    center, size, angle, confidence = tf.split(input, [ 2, 2, 2, 1 ], axis=-1)
+    x = tf.reshape(x, [
+      tf.shape(x)[0], GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS,
+    ])
+    center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
 
     center = tf.sigmoid(center)
     size = tf.exp(size) * self.prior_sizes
@@ -173,7 +178,7 @@ class Model:
     bottom_right = tf.minimum(a['bottom_right'], b['bottom_right'],
         name='iou_bottom_right')
 
-    size = tf.nn.relu(bottom_right - to_left, name='iou_size')
+    size = tf.nn.relu(bottom_right - top_left, name='iou_size')
     intersection = self.area(size, 'iou_area')
     union = a['area'] + b['area'] - intersection
 
