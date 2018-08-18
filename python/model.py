@@ -74,16 +74,18 @@ class Model:
       abs_cos_diff = tf.abs(1.0 - angle_diff, name='abs_cos_diff')
 
       iou *= abs_cos_diff
+      max_iou = tf.one_hot(tf.argmax(iou, axis=-1), depth=GRID_DEPTH, axis=-1,
+          on_value=True, off_value=False, dtype=tf.bool)
 
-      active_anchors = tf.logical_or(iou > self.iou_threshold,
-          iou == tf.reduce_max(iou, axis=-1, name='max_iou'))
+      active_anchors = tf.logical_or(iou >= self.iou_threshold, max_iou)
       active_anchors = tf.cast(active_anchors, dtype=tf.float32,
           name='active_anchors')
+      active_anchors *= labels['confidence']
 
       inactive_anchors = 1.0 - active_anchors
 
       # Confidence loss
-      expected_confidence = active_anchors * labels['confidence']
+      expected_confidence = active_anchors
 
       confidence_loss = \
           (prediction['confidence'] - expected_confidence) ** 2 / 2.0

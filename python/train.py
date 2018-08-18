@@ -63,3 +63,4 @@ with tf.Session() as sess:
         break
       writer.add_summary(metrics, step)
       writer.flush()
+      exit(0)
