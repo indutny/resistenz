@@ -6,13 +6,15 @@ import json
 
 class Dataset:
   def __init__(self, image_size, grid_size, validate_split=0.15, max_crop=0.1,
-               saturation=0.5):
+               saturation=0.5, brightness=0.2, contrast=0.2):
     self.image_size = image_size
     self.grid_size = grid_size
     self.validate_split = validate_split
 
     self.max_crop = max_crop
     self.saturation = saturation
+    self.brightness = brightness
+    self.contrast = contrast
 
     self.images = [
         './dataset/processed/{}'.format(f)
@@ -105,6 +107,10 @@ class Dataset:
     if training:
       image = tf.image.random_saturation(image, 1.0 - self.saturation,
           1.0 + self.saturation)
+      image = tf.image.random_brightness(image, 1.0 - self.brightness,
+          1.0 + self.brightness)
+      image = tf.image.random_contrast(image, 1.0 - self.contrast,
+          1.0 + self.contrast)
       image = tf.image.rot90(image, tf.random_uniform([], 0, 4, dtype=tf.int32))
 
     #
@@ -168,7 +174,10 @@ class Dataset:
         axis=-1, name='first_in_cell') * is_non_empty_cell
 
     grid = tf.expand_dims(first_in_cell, axis=-1) * rects['rect']
-    grid = tf.reduce_sum(grid, axis=2, name='grid')
+    grid = tf.reduce_sum(grid, axis=2, name='shallow_grid')
+
+    # Add extra dimension for grid depth
+    grid = tf.expand_dims(grid, axis=2, name='grid')
 
     return grid
 
