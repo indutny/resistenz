@@ -34,6 +34,7 @@ with tf.Session() as sess:
   validation_batch = validation_iter.get_next()
 
   # Predictions
+  # NOTE: yes, this compiles both twice... but perhaps it is faster this way?
   training_pred = model.forward(training_batch[0])
   validation_pred = model.forward(validation_batch[0])
 

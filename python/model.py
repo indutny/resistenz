@@ -60,7 +60,7 @@ class Model:
       return x
 
   def loss_and_metrics(self, prediction, labels, tag='train'):
-    with tf.variable_scope('resistenz_loss', reuse=False, \
+    with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
         values=[ prediction, labels ]):
       prediction = self.parse_box(prediction, 'prediction')
       labels = self.parse_box(labels, 'labels')
