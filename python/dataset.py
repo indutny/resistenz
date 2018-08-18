@@ -150,23 +150,18 @@ class Dataset:
         [ 1, self.grid_size ], name='cell_offsets_y')
 
     cell_starts = tf.stack([ cell_offsets_x, cell_offsets_y ], axis=2)
-    cell_ends = cell_starts + (1.0 / self.grid_size)
 
     cell_starts = tf.expand_dims(cell_starts, axis=2, name='cell_starts')
-    cell_ends = tf.expand_dims(cell_ends, axis=2, name='cell_ends')
 
     # Broadcast
     center = tf.expand_dims(rects['center'], axis=0)
     center = tf.expand_dims(center, axis=0, name='broadcast_center')
+    center -= cell_starts
 
     rect_count = rects['center'].shape[0]
 
-    indices = tf.range(0, rect_count)
-    indices = tf.expand_dims(indices, axis=0)
-    indices = tf.expand_dims(indices, axis=0, name='broadcast_indices')
-
     # Test
-    is_in_cell = tf.logical_and(center >= cell_starts, center < cell_ends)
+    is_in_cell = tf.logical_and(center >= 0.0, center < 1 / self.grid_size)
     is_in_cell = tf.reduce_min(tf.cast(is_in_cell, dtype=tf.float32), axis=-1,
         name='is_in_cell')
     is_non_empty_cell = tf.reduce_max(is_in_cell, axis=-1, keepdims=True,
@@ -175,7 +170,15 @@ class Dataset:
     first_in_cell = tf.one_hot(tf.argmax(is_in_cell, axis=-1), depth=rect_count,
         axis=-1, name='first_in_cell') * is_non_empty_cell
 
-    grid = tf.expand_dims(first_in_cell, axis=-1) * rects['rect']
+    # Tile sizes, angles, and confidence
+    rest = rects['rest']
+    rest = tf.reshape(rest, [ 1, 1, rest.shape[0], rest.shape[-1] ])
+    rest = tf.tile(rest, [ self.grid_size, self.grid_size, 1, 1 ],
+        name='broadcast_rest')
+
+    rect = tf.concat([ center * float(self.grid_size), rest ], axis=-1)
+
+    grid = tf.expand_dims(first_in_cell, axis=-1) * rect
     grid = tf.reduce_sum(grid, axis=2, name='shallow_grid')
 
     # Add extra dimension for grid depth
@@ -218,19 +221,17 @@ class Dataset:
 
     angle = tf.atan2(max_side[:, 1], max_side[:, 0])
     angle = tf.where(angle < 0.0, angle + math.pi, angle)
+    angle = tf.stack([ tf.cos(angle), tf.sin(angle) ], axis=-1, name='angle')
 
     center /= float(self.image_size)
     size /= float(self.image_size)
 
     rect_count = center.shape[0]
+    confidence = tf.ones([ rect_count, 1 ], dtype=tf.float32)
 
-    rect = tf.concat([
-      center, size,
-      tf.stack([ tf.cos(angle), tf.sin(angle) ], axis=-1, name='angle'),
-      tf.tile(tf.constant(1.0, shape=(1,1,)), [ rect_count, 1 ]), # confidence
-    ], axis=1)
+    rest = tf.concat([ size, angle, confidence ], axis=-1)
 
-    return { 'center': center, 'size': size, 'angle': angle, 'rect': rect }
+    return { 'center': center, 'rest': rest }
 
   def triangle_area(self, side1, side2):
     return tf.abs(side1[:, 0] * side2[:, 1] - side1[:, 1] * side2[:, 0]) / 2.0
