@@ -5,3 +5,4 @@ images/*.svg
 saves/*
 !saves/.gitkeep
 __pycache__/
+logs/

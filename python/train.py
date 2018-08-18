@@ -1,14 +1,16 @@
+import os
 import tensorflow as tf
 
 from dataset import Dataset
 from model import Model, IMAGE_SIZE, GRID_SIZE
+from args import parse_args
 
-NUM_EPOCHS = 100000
-LR = 0.01
+args, tag = parse_args()
+print('Running with a tag "{}"'.format(tag))
 
 model = Model()
 
-optimizer = tf.train.MomentumOptimizer(LR, 0.9)
+optimizer = tf.train.MomentumOptimizer(args.lr, args.momentum)
 
 global_step = tf.Variable(name='global_step', initial_value=0, dtype=tf.int32)
 
@@ -22,8 +24,8 @@ with tf.Session() as sess:
   validation_single = validation.batch(1).repeat()
 
   # Real datasets and their iterators
-  training = training.batch(32)
-  validation = validation.batch(32)
+  training = training.batch(args.batch_size)
+  validation = validation.batch(args.batch_size)
 
   training_iter = training.make_initializable_iterator()
   validation_iter = validation.make_initializable_iterator()
@@ -46,14 +48,17 @@ with tf.Session() as sess:
   sess.run(tf.global_variables_initializer())
   sess.graph.finalize()
 
-  for i in range(0, NUM_EPOCHS):
+  writer = tf.summary.FileWriter(os.path.join('.', 'logs', tag))
+  writer.add_graph(tf.get_default_graph())
+
+  for i in range(0, args.epochs):
     print('Epoch {}'.format(i))
 
     sess.run([ training_iter.initializer, validation_iter.initializer ])
     while True:
       try:
-        _, loss, metrics = \
-            sess.run([ minimize, training_loss, training_metrics ])
-        print(loss)
+        _, metrics, step = sess.run([ minimize, training_metrics, global_step ])
       except tf.errors.OutOfRangeError:
         break
+      writer.add_summary(metrics, step)
+      writer.flush()

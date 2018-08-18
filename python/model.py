@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 IMAGE_SIZE = 416
+# TODO(indutny): there is no reason to not calculate grid_size automatically
 GRID_SIZE = 13
 GRID_DEPTH = 5
 GRID_CHANNELS = 7
@@ -18,14 +19,6 @@ class Model:
   def __init__(self,
                prior_sizes=PRIOR_SIZES, iou_threshold=0.5,
                lambda_obj=1.0, lambda_no_obj=0.5, lambda_coord=5.0):
-    self.placeholders = {
-      'image': tf.placeholder(tf.float32,
-        shape=(None, IMAGE_SIZE, IMAGE_SIZE, 3,), name='image'),
-      'grid': tf.placeholder(tf.float32,
-        shape=(None, GRID_SIZE, GRID_SIZE, 1, GRID_CHANNELS,),
-        name='grid'),
-    }
-
     self.prior_sizes = tf.constant(prior_sizes, dtype=tf.float32)
     self.iou_threshold = iou_threshold
 
@@ -69,8 +62,6 @@ class Model:
   def loss_and_metrics(self, prediction, labels, tag='train'):
     with tf.variable_scope('resistenz_loss', reuse=False, \
         values=[ prediction, labels ]):
-      metrics = []
-
       prediction = self.parse_box(prediction, 'prediction')
       labels = self.parse_box(labels, 'labels')
 
@@ -127,15 +118,19 @@ class Model:
       # Total
       total_loss = obj_loss + no_obj_loss + coord_loss
 
-      metrics = [
-        tf.summary.scalar('{}/iou'.format(tag), tf.reduce_mean(iou)),
-        tf.summary.scalar('{}/obj_loss'.format(tag), obj_loss),
-        tf.summary.scalar('{}/no_obj_loss'.format(tag), no_obj_loss),
-        tf.summary.scalar('{}/coord_loss'.format(tag), coord_loss),
-        tf.summary.scalar('{}/loss'.format(tag), total_loss),
-      ]
+      # Some metrics
+      mean_iou = tf.reduce_mean(iou)
 
-      return total_loss, tf.summary.merge(metrics)
+    # NOTE: create metrics outside of variable scope for clearer name
+    metrics = [
+      tf.summary.scalar('{}/iou'.format(tag), mean_iou),
+      tf.summary.scalar('{}/obj_loss'.format(tag), obj_loss),
+      tf.summary.scalar('{}/no_obj_loss'.format(tag), no_obj_loss),
+      tf.summary.scalar('{}/coord_loss'.format(tag), coord_loss),
+      tf.summary.scalar('{}/loss'.format(tag), total_loss),
+    ]
+
+    return total_loss, tf.summary.merge(metrics)
 
   # Helpers
 

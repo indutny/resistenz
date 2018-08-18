@@ -4,6 +4,8 @@ import numpy as np
 import os
 import json
 
+DIR = os.path.join('.', 'dataset', 'processed')
+
 class Dataset:
   def __init__(self, image_size, grid_size, validate_split=0.15, max_crop=0.1,
                saturation=0.5, brightness=0.2, contrast=0.2):
@@ -17,8 +19,8 @@ class Dataset:
     self.contrast = contrast
 
     self.images = [
-        './dataset/processed/{}'.format(f)
-        for f in os.listdir('./dataset/processed')
+        os.path.join(DIR, f)
+        for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
 
