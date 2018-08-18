@@ -146,9 +146,9 @@ export class Input {
     const rgb = new Float32Array(
         bitmap.width * bitmap.height * TARGET_CHANNELS);
     for (let i = 0, j = 0; i < bitmap.data.length; i += 4, j += 3) {
-      rgb[j + 0] = (bitmap.data[i + 0] / 0xff) * 2 - 1;
-      rgb[j + 1] = (bitmap.data[i + 1] / 0xff) * 2 - 1;
-      rgb[j + 2] = (bitmap.data[i + 2] / 0xff) * 2 - 1;
+      rgb[j + 0] = bitmap.data[i + 0] / 0xff;
+      rgb[j + 1] = bitmap.data[i + 1] / 0xff;
+      rgb[j + 2] = bitmap.data[i + 2] / 0xff;
     }
 
     const rects = this.computeRects();
@@ -210,9 +210,6 @@ export class Input {
       const cos = Math.cos(scaledRect.angle);
       const sin = Math.sin(scaledRect.angle);
 
-      // Only 1st quadrant
-      assert(0 <= cos && cos <= 1, `'cos' out of bounds: ${cos}`);
-      assert(0 <= sin && sin <= 1, `'sin' out of bounds: ${sin}`);
       grid[gridOff + 4] = cos;
       grid[gridOff + 5] = sin;
 

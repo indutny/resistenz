@@ -27,7 +27,7 @@ export class Output extends tf.layers.Layer {
 
       const depth = size.shape[size.shape.length - 2];
 
-      const priorSizes = tf.tensor2d(PRIOR_SIZES.map(revSigmoid), [ depth, 2 ]);
+      const priorSizes = tf.tensor2d(PRIOR_SIZES, [ depth, 2 ]);
 
       const angleNorm = angle.square().sum(-1).sqrt().add(tf.scalar(1e-23));
 
@@ -35,8 +35,8 @@ export class Output extends tf.layers.Layer {
         tf.sigmoid(center),
 
         // Offset sigmoid
-        tf.sigmoid(size.add(priorSizes)),
-        angle.div(angleNorm),
+        tf.exp(size).mul(priorSizes),
+        angle.div(angleNorm.expandDims(-1)),
         tf.sigmoid(confidence),
       ], -1);
     });

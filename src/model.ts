@@ -5,6 +5,7 @@ import {
   GRID_SIZE, GRID_CHANNELS,
 } from './input';
 
+import { SaveImage } from './layers/save-image';
 import { Noise } from './layers/noise';
 import { Output, PRIOR_SIZES } from './layers/output';
 import { MobileNetLayer } from './layers/mobilenet';
@@ -103,7 +104,7 @@ export class Model {
 
   private loss(xs: tf.Tensor, ys: tf.Tensor): tf.Tensor {
     return tf.tidy(() => {
-      // shape == [ batch, grid_size, grid_size, grid_depth, grid_channels ]
+      // shape == [ batch, gridY, gridX, grid_depth, grid_channels ]
       function parseBox(out: tf.Tensor) {
         let [ center, size, angle, confidence ] =
             tf.split(out, [ 2, 2, 2, 1 ], -1);
@@ -160,10 +161,13 @@ export class Model {
 
       // Multiply by angle difference
       // NOTE: (cos x - cos y)^2 + (sin x - sin y)^2 = 2 (1 - cos (x - y))
-      const angleLoss = tf.squaredDifference(x.box.angle, y.box.angle).sum(-1)
-          .div(tf.scalar(2));
-      const angleMul = tf.scalar(1).sub(angleLoss);
-      const angleIOU = iou.mul(angleMul);
+      const angleSquareDiff =
+        tf.squaredDifference(x.box.angle, y.box.angle).mean(-1);
+
+      // | cos(x - y) |
+      const angleCosDiff = tf.scalar(1).sub(angleSquareDiff).abs();
+
+      const angleIOU = iou.mul(angleCosDiff);
 
       // Mask out maximum angleIOU in each grid group, and everything higher
       // than threshold
@@ -181,29 +185,26 @@ export class Model {
       const hasObject = x.confidence.mul(onMask);
       const noObject = tf.scalar(1).sub(hasObject);
 
-      const objCount = hasObject.sum(-1).sum(-1).sum(-1).add(epsilon);
-      const noObjCount = noObject.sum(-1).sum(-1).sum(-1).add(epsilon)
-
       // Compute losses
       const objLoss = tf.squaredDifference(tf.scalar(1), y.confidence)
-          .mul(hasObject).sum(-1)
-          .sum(-1).sum(-1).div(objCount)
+          .mul(hasObject)
           .mul(tf.scalar(LAMBDA_OBJ));
 
       const noObjLoss = y.confidence.square()
-          .mul(noObject).sum(-1)
-          .sum(-1).sum(-1).div(noObjCount)
+          .mul(noObject)
           .mul(tf.scalar(LAMBDA_NO_OBJ));
 
-      const centerLoss =
-          tf.squaredDifference(x.box.center, y.box.center).sum(-1);
+      const confidenceLoss = objLoss.add(noObjLoss).mean(-1);
+
+      // Normalize center to have same dimensionality as size
+      const centerLoss = tf.squaredDifference(x.box.center, y.box.center)
+        .sum(-1).div(tf.scalar(GRID_SIZE ** 2));
 
       const sizeLoss = tf.squaredDifference(
         x.box.size.sqrt(), y.box.size.sqrt()).sum(-1);
 
-      const boxLoss = centerLoss.add(sizeLoss).add(angleLoss)
-          .mul(hasObject).sum(-1)
-          .sum(-1).sum(-1).div(objCount)
+      const boxLoss = centerLoss.add(sizeLoss).add(angleCosDiff)
+          .mul(hasObject).mean(-1)
           .mul(tf.scalar(LAMBDA_COORD));
 
       const weights = this.model.trainableWeights.filter((weight) => {
@@ -215,7 +216,7 @@ export class Model {
         return acc.add(weight.square().mean());
       }, tf.scalar(0)).mul(tf.scalar(WEIGHT_DECAY / 2));
 
-      return objLoss.add(noObjLoss).add(boxLoss).add(decayLoss);
+      return confidenceLoss.add(boxLoss).add(decayLoss);
     });
   }
 }
