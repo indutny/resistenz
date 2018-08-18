@@ -6,6 +6,7 @@ import json
 
 IMAGE_SIZE = 416
 MAX_CROP = 0.1
+GRID_SIZE = 13
 
 class Dataset:
   def __init__(self, validate_split=0.15):
@@ -15,7 +16,7 @@ class Dataset:
         for f in os.listdir('./dataset/processed')
         if f.endswith('.jpg')
     ]
-    self.images = self.images[:2]
+    self.images = self.images[:1]
 
     self.polygons = []
     max_polys = 0
@@ -37,7 +38,7 @@ class Dataset:
     # Pad polygons
     for image_polys in self.polygons:
       while (len(image_polys) < max_polys):
-        image_polys.append(4 * [ [ -1.0, -1.0 ] ])
+        image_polys.append(4 * [ [ -1000.0, -1000.0 ] ])
 
     # Just to have stable shape for empty validation data
     self.polygons = np.array(self.polygons)
@@ -93,6 +94,8 @@ class Dataset:
     # Resize all images to target size
     #
     image = tf.image.resize_images(image, [ IMAGE_SIZE, IMAGE_SIZE ])
+    polygons = polygons * float(IMAGE_SIZE) / \
+        tf.cast(crop_size, dtype=tf.float32)
     return image, self.polygons_to_grid(polygons)
 
   def load_single(self, images, polygons):
@@ -115,7 +118,43 @@ class Dataset:
 
   def polygons_to_grid(self, polygons):
     rects = self.polygons_to_rects(polygons)
-    return rects
+
+    cell_offsets = tf.linspace(0.0, 1.0 - 1 / GRID_SIZE, GRID_SIZE)
+    cell_offsets_x = tf.tile(tf.expand_dims(cell_offsets, axis=0),
+        [ GRID_SIZE, 1 ], name='cell_offsets_x')
+    cell_offsets_y = tf.tile(tf.expand_dims(cell_offsets, axis=1),
+        [ 1, GRID_SIZE ], name='cell_offsets_y')
+
+    cell_starts = tf.stack([ cell_offsets_x, cell_offsets_y ], axis=2)
+    cell_ends = cell_starts + (1.0 / GRID_SIZE)
+
+    cell_starts = tf.expand_dims(cell_starts, axis=2, name='cell_starts')
+    cell_ends = tf.expand_dims(cell_ends, axis=2, name='cell_ends')
+
+    # Broadcast
+    center = tf.expand_dims(rects['center'], axis=0)
+    center = tf.expand_dims(center, axis=0, name='broadcast_center')
+
+    rect_count = rects['center'].shape[0]
+
+    indices = tf.range(0, rect_count)
+    indices = tf.expand_dims(indices, axis=0)
+    indices = tf.expand_dims(indices, axis=0, name='broadcast_indices')
+
+    # Test
+    is_in_cell = tf.logical_and(center >= cell_starts, center < cell_ends)
+    is_in_cell = tf.reduce_min(tf.cast(is_in_cell, dtype=tf.float32), axis=-1,
+        name='is_in_cell')
+    is_non_empty_cell = tf.reduce_max(is_in_cell, axis=-1, keepdims=True,
+        name='is_non_empty_cell')
+
+    first_in_cell = tf.one_hot(tf.argmax(is_in_cell, axis=-1), depth=rect_count,
+        axis=-1, name='first_in_cell') * is_non_empty_cell
+
+    grid = tf.expand_dims(first_in_cell, axis=-1) * rects['rect']
+    grid = tf.reduce_sum(grid, axis=2, name='grid')
+
+    return grid
 
   def polygons_to_rects(self, polygons):
     center = tf.reduce_mean(polygons, axis=1)
@@ -153,7 +192,18 @@ class Dataset:
     angle = tf.atan2(max_side[:, 1], max_side[:, 0])
     angle = tf.where(angle < 0.0, angle + math.pi, angle)
 
-    return tf.concat([ center, size, tf.expand_dims(angle, axis=-1) ], axis=1)
+    center /= IMAGE_SIZE
+    size /= IMAGE_SIZE
+
+    rect_count = center.shape[0]
+
+    rect = tf.concat([
+      center, size,
+      tf.stack([ tf.cos(angle), tf.sin(angle) ], axis=-1, name='angle'),
+      tf.tile(tf.constant(1.0, shape=(1,1,)), [ rect_count, 1 ]), # confidence
+    ], axis=1)
+
+    return { 'center': center, 'size': size, 'angle': angle, 'rect': rect }
 
   def triangle_area(self, side1, side2):
     return tf.abs(side1[:, 0] * side2[:, 1] - side1[:, 1] * side2[:, 0]) / 2.0
