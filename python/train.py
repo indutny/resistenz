@@ -59,13 +59,13 @@ with tf.Session() as sess:
   minimize = optimizer.minimize(training_loss, global_step)
 
   sess.run(tf.global_variables_initializer())
-  sess.graph.finalize()
 
   writer = tf.summary.FileWriter(os.path.join(LOG_DIR, tag))
   writer.add_graph(tf.get_default_graph())
 
   saver = tf.train.Saver(max_to_keep=100, name=tag)
 
+  sess.graph.finalize()
   for i in range(0, args.epochs):
     print('Epoch {}'.format(i))
     batches = 0
