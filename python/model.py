@@ -2,7 +2,7 @@ import tensorflow as tf
 
 IMAGE_SIZE = 416
 # TODO(indutny): there is no reason to not calculate grid_size automatically
-GRID_SIZE = 6
+GRID_SIZE = 13
 GRID_DEPTH = 5
 GRID_CHANNELS = 7
 
@@ -173,8 +173,10 @@ class Model:
 
   def conv_bn(self, input, filters, size, name, activation=tf.nn.leaky_relu):
     x = tf.layers.conv2d(input, filters=filters, kernel_size=size, \
+        padding='SAME',
         name='conv_{}'.format(name))
-    x = tf.layers.batch_normalization(x, name='bn_{}'.format(name))
+    x = tf.layers.batch_normalization(x, momentum=0.9, epsilon=1e-5,
+        name='bn_{}'.format(name))
     if not activation is None:
       x = activation(x)
     return x
