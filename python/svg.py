@@ -9,54 +9,55 @@ class SVG:
     self.grid = grid
 
   def write_file(self, filename):
-    image = tf.cast(self.raw * 255.0, dtype=tf.uint8)
-    height = int(image.shape[0])
-    width = int(image.shape[1])
+    with tf.name_scope('svg'):
+      image = tf.cast(self.raw * 255.0, dtype=tf.uint8)
+      height = int(image.shape[0])
+      width = int(image.shape[1])
 
-    jpeg = tf.image.encode_jpeg(image, quality=80)
-    web_base64 = tf.encode_base64(jpeg, pad=True)
+      jpeg = tf.image.encode_jpeg(image, quality=80)
+      web_base64 = tf.encode_base64(jpeg, pad=True)
 
-    # I'm not fond of this, but...
-    base64 = tf.regex_replace(web_base64, '-', '+')
-    base64 = tf.regex_replace(base64, '_', '/')
+      # I'm not fond of this, but...
+      base64 = tf.regex_replace(web_base64, '-', '+')
+      base64 = tf.regex_replace(base64, '_', '/')
 
-    svg = '<svg version="1.1" baseProfile="full" ' + \
-        'width="{}" height="{}" '.format(width, height) + \
-        'xmlns="http://www.w3.org/2000/svg" ' + \
-        'xmlns:xlink="http://www.w3.org/1999/xlink">\n'
+      svg = '<svg version="1.1" baseProfile="full" ' + \
+          'width="{}" height="{}" '.format(width, height) + \
+          'xmlns="http://www.w3.org/2000/svg" ' + \
+          'xmlns:xlink="http://www.w3.org/1999/xlink">\n'
 
-    # Write image at bottom to make reading SVG source easier
-    svg += '  <image width="{}" height="{}" '.format(width, height) + \
-        'xlink:href="data:image/png;base64,' + base64 + '"/>\n'
+      # Write image at bottom to make reading SVG source easier
+      svg += '  <image width="{}" height="{}" '.format(width, height) + \
+          'xlink:href="data:image/png;base64,' + base64 + '"/>\n'
 
-    # Compute cell offsets
-    grid_size = int(self.grid.shape[0])
-    grid_depth = int(self.grid.shape[2])
-    grid_channels = int(self.grid.shape[3])
+      # Compute cell offsets
+      grid_size = int(self.grid.shape[0])
+      grid_depth = int(self.grid.shape[2])
+      grid_channels = int(self.grid.shape[3])
 
-    cell_starts = create_cell_starts(grid_size) * float(grid_size)
-    rest = tf.zeros([ grid_size, grid_size, 1, grid_channels - 2 ])
-    cell_starts = tf.concat([ cell_starts, rest ], axis=-1)
+      cell_starts = create_cell_starts(grid_size) * float(grid_size)
+      rest = tf.zeros([ grid_size, grid_size, 1, grid_channels - 2 ])
+      cell_starts = tf.concat([ cell_starts, rest ], axis=-1)
 
-    # Add cell offsets
-    grid = self.grid + cell_starts
+      # Add cell offsets
+      grid = self.grid + cell_starts
 
-    # Fix dimensions
-    grid = grid * tf.constant([
-      float(width) / grid_size , float(height) / grid_size,
-      float(width), float(height),
-      1, 1, 1 ]);
+      # Fix dimensions
+      grid = grid * tf.constant([
+        float(width) / grid_size , float(height) / grid_size,
+        float(width), float(height),
+        1, 1, 1 ]);
 
-    # Make grid linear
-    grid = tf.reshape(grid,
-        [ grid_size * grid_size * grid_depth, grid_channels ])
+      # Make grid linear
+      grid = tf.reshape(grid,
+          [ grid_size * grid_size * grid_depth, grid_channels ])
 
-    svg += tf.foldl(lambda acc, cell: acc + self.cell_to_polygon(cell), grid,
-        initializer=tf.constant('', tf.string))
+      svg += tf.foldl(lambda acc, cell: acc + self.cell_to_polygon(cell), grid,
+          initializer=tf.constant('', tf.string))
 
-    svg += '</svg>\n'
+      svg += '</svg>\n'
 
-    return tf.write_file(filename, svg)
+      return tf.write_file(filename, svg)
 
   def cell_to_polygon(self, cell):
     center, size, angle, confidence = tf.split(cell, [ 2, 2, 2, 1 ], axis=-1)
@@ -85,9 +86,11 @@ class SVG:
     points = point_to_str(rect[0]) + ' ' + point_to_str(rect[1]) + ',' + \
         point_to_str(rect[2]) + ' ' + point_to_str(rect[3])
 
-    alpha = tf.exp(1.0 - 1.0 / (confidence + 1e-23))
+    alpha = tf.exp(1.0 - 1.0 / (confidence + 1e-23), name='alpha')
+
+    color = tf.where(confidence >= 0.5, '0,255,0', '255,0,0', name='color')
 
     fill = 'none'
-    stroke = 'rgba(255,0,0,' + tf.as_string(alpha) + ')'
+    stroke = 'rgba(' +  color + ',' + tf.as_string(alpha) + ')'
     return '  <polygon points="' + points + '" fill="' + fill + \
         '" stroke="' + stroke + '"/>\n'

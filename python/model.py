@@ -54,6 +54,13 @@ class Model:
       return x
 
   def loss_and_metrics(self, prediction, labels, tag='train'):
+    # Just a helpers
+    def sum_over_cells(x, name=None):
+      return tf.reduce_sum(x, axis=3, name=name)
+
+    def sum_over_grid(x, name=None):
+      return tf.reduce_sum(tf.reduce_sum(x, axis=2), axis=1, name=name)
+
     with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
         values=[ prediction, labels ]):
       prediction = self.parse_box(prediction, 'prediction')
@@ -71,6 +78,7 @@ class Model:
       max_iou = tf.one_hot(tf.argmax(iou, axis=-1), depth=GRID_DEPTH, axis=-1,
           on_value=True, off_value=False, dtype=tf.bool)
 
+      # Compute masks
       active_anchors = tf.logical_or(iou >= self.iou_threshold, max_iou)
       active_anchors = tf.cast(active_anchors, dtype=tf.float32,
           name='active_anchors')
@@ -78,24 +86,29 @@ class Model:
 
       inactive_anchors = 1.0 - active_anchors
 
-      active_count = tf.reduce_sum(
-          tf.reduce_sum(tf.reduce_sum(active_anchors, axis=-1), axis=-1),
-          axis=-1, name='active_count') + 1e-29
-      inactive_count = tf.reduce_sum(
-          tf.reduce_sum(tf.reduce_sum(inactive_anchors, axis=-1), axis=-1),
-          axis=-1, name='inactive_count') + 1e-29
-
-      # Confidence loss
       expected_confidence = active_anchors
 
+      # Normalize masks
+      active_count = sum_over_grid(sum_over_cells(active_anchors),
+          name='active_count')
+
+      active_count = tf.expand_dims(active_count, axis=-1)
+      active_count = tf.expand_dims(active_count, axis=-1)
+      active_count = tf.expand_dims(active_count, axis=-1)
+
+      inactive_count = GRID_SIZE * GRID_SIZE * GRID_DEPTH - active_count
+
+      active_anchors /= active_count + 1e-23
+      inactive_anchors /= inactive_count + 1e-23
+
+      # Confidence loss
       confidence_loss = \
           (prediction['confidence'] - expected_confidence) ** 2 / 2.0
 
-      obj_loss = tf.reduce_sum( \
-          self.lambda_obj * active_anchors * confidence_loss, axis=-1,
-          name='obj_loss')
-      no_obj_loss = tf.reduce_sum( \
-          self.lambda_no_obj * inactive_anchors * confidence_loss, axis=-1,
+      obj_loss = sum_over_cells( \
+          self.lambda_obj * active_anchors * confidence_loss, name='obj_loss')
+      no_obj_loss = sum_over_cells( \
+          self.lambda_no_obj * inactive_anchors * confidence_loss,
           name='no_obj_loss')
 
       # Coordinate loss
@@ -109,17 +122,12 @@ class Model:
 
       coord_loss = self.lambda_coord * active_anchors * \
           (center_loss + size_loss + angle_loss)
-      coord_loss = tf.reduce_sum(coord_loss, axis=-1)
+      coord_loss = sum_over_cells(coord_loss, name='coord_loss')
 
       # To batch losses
-      obj_loss = tf.reduce_sum(tf.reduce_sum(obj_loss, axis=-1), axis=-1)
-      no_obj_loss = tf.reduce_sum(tf.reduce_sum(no_obj_loss, axis=-1), axis=-1)
-      coord_loss = tf.reduce_sum(tf.reduce_sum(coord_loss, axis=-1), axis=-1)
-
-      # Normalize by active/inactive count
-      obj_loss /= active_count
-      no_obj_loss /= inactive_count
-      coord_loss /= active_count
+      obj_loss = sum_over_grid(obj_loss)
+      no_obj_loss = sum_over_grid(no_obj_loss)
+      coord_loss = sum_over_grid(coord_loss)
 
       # To scalars
       obj_loss = tf.reduce_mean(obj_loss)
@@ -135,12 +143,27 @@ class Model:
       mean_iou = tf.reduce_sum(tf.reduce_sum(iou * active_anchors, axis=-1) / \
           (tf.reduce_sum(active_anchors) + 1e-23))
 
+      center_loss = self.lambda_coord * center_loss * active_anchors
+      size_loss = self.lambda_coord * size_loss * active_anchors
+      angle_loss = self.lambda_coord * angle_loss * active_anchors
+
+      center_loss = sum_over_grid(center_loss)
+      size_loss = sum_over_grid(size_loss)
+      angle_loss = sum_over_grid(angle_loss)
+
+      center_loss = tf.reduce_mean(center_loss)
+      size_loss = tf.reduce_mean(size_loss)
+      angle_loss = tf.reduce_mean(angle_loss)
+
     # NOTE: create metrics outside of variable scope for clearer name
     metrics = [
       tf.summary.scalar('{}/iou'.format(tag), mean_iou),
       tf.summary.scalar('{}/obj_loss'.format(tag), obj_loss),
       tf.summary.scalar('{}/no_obj_loss'.format(tag), no_obj_loss),
       tf.summary.scalar('{}/coord_loss'.format(tag), coord_loss),
+      tf.summary.scalar('{}/center_loss'.format(tag), center_loss),
+      tf.summary.scalar('{}/size_loss'.format(tag), size_loss),
+      tf.summary.scalar('{}/angle_loss'.format(tag), angle_loss),
       tf.summary.scalar('{}/loss'.format(tag), total_loss),
     ]
 

@@ -48,7 +48,10 @@ async function generate() {
   }
 
   const clusterize = promisify(kmeans.clusterize);
-  const res =await clusterize.call(kmeans, points, { k: GRID_DEPTH });
+
+  // TODO(indutny): apparently this is very wrong, we should clusterize by
+  // IoU!!!
+  const res = await clusterize.call(kmeans, points, { k: GRID_DEPTH });
 
   const centers = res.map((obj: any) => obj.centroid);
 

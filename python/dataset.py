@@ -25,7 +25,6 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
-    self.images = self.images[:1]
 
     self.polygons = []
     max_polys = 0
