@@ -9,6 +9,7 @@ from svg import SVG
 # TODO(indutny): move these to args?
 LOG_DIR = os.path.join('.', 'logs')
 IMAGE_DIR = os.path.join('.', 'images')
+SAVE_DIR = os.path.join('.', 'saves')
 
 args, tag = parse_args()
 print('Running with a tag "{}"'.format(tag))
@@ -63,6 +64,8 @@ with tf.Session() as sess:
   writer = tf.summary.FileWriter(os.path.join(LOG_DIR, tag))
   writer.add_graph(tf.get_default_graph())
 
+  saver = tf.train.Saver(max_to_keep=100, name=tag)
+
   for i in range(0, args.epochs):
     print('Epoch {}'.format(i))
     batches = 0
@@ -90,3 +93,6 @@ with tf.Session() as sess:
 
     # TODO(indutny): validation
     print('Completed {} batches'.format(batches))
+
+    if i % args.save_every == 0:
+      saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(i)))

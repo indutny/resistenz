@@ -9,6 +9,7 @@ def parse_args():
   parser.add_argument('--batch_size', type=int, default=32)
   parser.add_argument('--lr', type=float, default=0.001)
   parser.add_argument('--momentum', type=float, default=0.9)
+  parser.add_argument('--save_every', type=int, default=10)
 
   args = parser.parse_args()
 
