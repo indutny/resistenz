@@ -113,7 +113,7 @@ class Model:
 
       # Coordinate loss
       center_loss = tf.reduce_mean(
-          ((prediction['center'] - labels['center']) * GRID_SIZE) ** 2,
+          (prediction['center'] - labels['center']) ** 2,
           axis=-1, name='center_loss')
       size_loss = tf.reduce_mean(
           (tf.sqrt(prediction['size']) - tf.sqrt(labels['size'])) ** 2,

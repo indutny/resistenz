@@ -93,5 +93,6 @@ class SVG:
 
     fill = 'none'
     stroke = 'rgba(' +  color + ',' + tf.as_string(alpha) + ')'
-    return '  <polygon points="' + points + '" fill="' + fill + \
-        '" stroke="' + stroke + '"/>\n'
+    return tf.where(confidence >= 0.1, \
+        '  <polygon points="' + points + '" fill="' + fill + \
+        '" stroke="' + stroke + '"/>\n', '')

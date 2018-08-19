@@ -130,7 +130,8 @@ class Dataset:
          tf.constant(polygons, dtype=tf.float32),))
 
   def crop_polygons(self, polygons, crop_off, crop_size):
-    polygons -= tf.cast(crop_off, dtype=tf.float32)
+    # NOTE: `crop_off = [ height, width ]`
+    polygons -= tf.cast(tf.gather(crop_off, [ 1, 0 ]), dtype=tf.float32)
     polygon_centers = tf.reduce_mean(polygons, axis=1)
 
     # Coordinate-wise mask
