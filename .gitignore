@@ -2,6 +2,7 @@
 node_modules/
 npm-debug.log
 images/*.svg
+images/*.png
 saves/*
 !saves/.gitkeep
 __pycache__/

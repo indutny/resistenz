@@ -4,6 +4,8 @@ import numpy as np
 import os
 import json
 
+from utils import create_cell_starts
+
 DIR = os.path.join('.', 'dataset', 'processed')
 
 class Dataset:
@@ -23,6 +25,7 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
+    self.images = self.images[:1]
 
     self.polygons = []
     max_polys = 0
@@ -99,7 +102,8 @@ class Dataset:
     #
     # Resize all images to target size
     #
-    image = tf.image.resize_images(image, [ self.image_size, self.image_size ])
+    image = tf.image.resize_images(image, [ self.image_size, self.image_size ],
+        method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     polygons = polygons * float(self.image_size) / \
         tf.cast(crop_size, dtype=tf.float32)
 
@@ -109,9 +113,8 @@ class Dataset:
     if training:
       image = tf.image.random_saturation(image, 1.0 - self.saturation,
           1.0 + self.saturation)
-      image = tf.image.random_brightness(image, 1.0 - self.brightness,
-          1.0 + self.brightness)
-      image = tf.image.random_contrast(image, 1.0 - self.contrast,
+      image = tf.image.random_brightness(image, self.brightness)
+      image = tf.image.random_contrast(image, 1.0 - self.contrast, \
           1.0 + self.contrast)
       image = tf.image.rot90(image, tf.random_uniform([], 0, 4, dtype=tf.int32))
 
@@ -143,15 +146,7 @@ class Dataset:
   def polygons_to_grid(self, polygons):
     rects = self.polygons_to_rects(polygons)
 
-    cell_offsets = tf.linspace(0.0, 1.0 - 1 / self.grid_size, self.grid_size)
-    cell_offsets_x = tf.tile(tf.expand_dims(cell_offsets, axis=0),
-        [ self.grid_size, 1 ], name='cell_offsets_x')
-    cell_offsets_y = tf.tile(tf.expand_dims(cell_offsets, axis=1),
-        [ 1, self.grid_size ], name='cell_offsets_y')
-
-    cell_starts = tf.stack([ cell_offsets_x, cell_offsets_y ], axis=2)
-
-    cell_starts = tf.expand_dims(cell_starts, axis=2, name='cell_starts')
+    cell_starts = create_cell_starts(self.grid_size)
 
     # Broadcast
     center = tf.expand_dims(rects['center'], axis=0)
@@ -176,7 +171,10 @@ class Dataset:
     rest = tf.tile(rest, [ self.grid_size, self.grid_size, 1, 1 ],
         name='broadcast_rest')
 
-    rect = tf.concat([ center * float(self.grid_size), rest ], axis=-1)
+    # Rescale center so that it would be in [ 0, 1) range
+    center *= float(self.grid_size)
+
+    rect = tf.concat([ center, rest ], axis=-1)
 
     grid = tf.expand_dims(first_in_cell, axis=-1) * rect
     grid = tf.reduce_sum(grid, axis=2, name='shallow_grid')
@@ -223,6 +221,7 @@ class Dataset:
     angle = tf.where(angle < 0.0, angle + math.pi, angle)
     angle = tf.stack([ tf.cos(angle), tf.sin(angle) ], axis=-1, name='angle')
 
+    # Rescale offsets, sizes to be a percent of image size
     center /= float(self.image_size)
     size /= float(self.image_size)
 
