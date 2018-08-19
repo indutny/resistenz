@@ -4,9 +4,10 @@ import tensorflow as tf
 from utils import create_cell_starts
 
 class SVG:
-  def __init__(self, raw, grid):
+  def __init__(self, raw, grid, label):
     self.raw = raw
     self.grid = grid
+    self.label = label
 
   def write_file(self, filename):
     with tf.name_scope('svg'):

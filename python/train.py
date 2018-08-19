@@ -39,10 +39,8 @@ with tf.Session() as sess:
 
   # Encode first images of each epoch for debugging purposes
   svg_op = {
-    'training': SVG(training_batch[0][0], training_pred[0]) \
-        .write_file(os.path.join(IMAGE_DIR, 'train.svg')),
-    'validation': SVG(validation_batch[0][0], validation_pred[0]) \
-        .write_file(os.path.join(IMAGE_DIR, 'validate.svg')),
+    'training': SVG(training_batch[0][0], training_pred[0], \
+        training_batch[1][0]).write_file(os.path.join(IMAGE_DIR, 'train.svg')),
   }
 
   # Steps
