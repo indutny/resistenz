@@ -10,20 +10,24 @@ class SVG:
 
   def write_file(self, filename):
     image = tf.cast(self.raw * 255.0, dtype=tf.uint8)
-    png = tf.image.encode_png(image)
-    web_base64 = tf.encode_base64(png, pad=True)
+    height = int(image.shape[0])
+    width = int(image.shape[1])
+
+    jpeg = tf.image.encode_jpeg(image, quality=80)
+    web_base64 = tf.encode_base64(jpeg, pad=True)
 
     # I'm not fond of this, but...
     base64 = tf.regex_replace(web_base64, '-', '+')
     base64 = tf.regex_replace(base64, '_', '/')
 
-    height = int(image.shape[0])
-    width = int(image.shape[1])
-
     svg = '<svg version="1.1" baseProfile="full" ' + \
         'width="{}" height="{}" '.format(width, height) + \
         'xmlns="http://www.w3.org/2000/svg" ' + \
         'xmlns:xlink="http://www.w3.org/1999/xlink">\n'
+
+    # Write image at bottom to make reading SVG source easier
+    svg += '  <image width="{}" height="{}" '.format(width, height) + \
+        'xlink:href="data:image/png;base64,' + base64 + '"/>\n'
 
     # Compute cell offsets
     grid_size = int(self.grid.shape[0])
@@ -49,10 +53,6 @@ class SVG:
 
     svg += tf.foldl(lambda acc, cell: acc + self.cell_to_polygon(cell), grid,
         initializer=tf.constant('', tf.string))
-
-    # Write image at bottom to make reading SVG source easier
-    svg += '  <img width="{}" height="{}" '.format(width, height) + \
-        'xlink:href="data:image/png;base64,' + base64 + '" />\n'
 
     svg += '</svg>\n'
 
@@ -85,7 +85,9 @@ class SVG:
     points = point_to_str(rect[0]) + ' ' + point_to_str(rect[1]) + ',' + \
         point_to_str(rect[2]) + ' ' + point_to_str(rect[3])
 
+    alpha = tf.exp(1.0 - 1.0 / (confidence + 1e-23))
+
     fill = 'none'
-    stroke = 'rgba(255,0,0,' + tf.as_string(confidence) + ')'
+    stroke = 'rgba(255,0,0,' + tf.as_string(alpha) + ')'
     return '  <polygon points="' + points + '" fill="' + fill + \
         '" stroke="' + stroke + '"/>\n'
