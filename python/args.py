@@ -10,10 +10,14 @@ def parse_args():
   parser.add_argument('--lr', type=float, default=0.001)
   parser.add_argument('--momentum', type=float, default=0.9)
   parser.add_argument('--save_every', type=int, default=10)
+  parser.add_argument('--tag', type=str)
 
   args = parser.parse_args()
 
   tag = '{}_bs{}_lr{}_m{}'.format(args.name, args.batch_size, args.lr,
       args.momentum)
+
+  if args.tag:
+    tag += '_' + args.tag
 
   return args, tag
