@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from utils import gen_rot_matrix
+
 IMAGE_SIZE = 416
 # TODO(indutny): there is no reason to not calculate grid_size automatically
 GRID_SIZE = 13
@@ -7,10 +9,15 @@ GRID_DEPTH = 5
 GRID_CHANNELS = 7
 
 PRIOR_SIZE = [ 0.15653530649021333, 0.0697987945243159 ]
+PRIOR_ANGLES = [ 0.0, 0.2, 0.4, 0.6, 0.8 ]
 
 class Model:
-  def __init__(self, config, prior_size=PRIOR_SIZE):
-    self.prior_size = tf.constant(prior_size, dtype=tf.float32)
+  def __init__(self, config, prior_size=PRIOR_SIZE, prior_angles=PRIOR_ANGLES):
+    self.prior_size = tf.constant(prior_size, dtype=tf.float32,
+        name='prior_size')
+    self.prior_rotations = tf.constant([
+      gen_rot_matrix(angle) for angle in prior_angles
+    ], name='prior_rotations')
     self.iou_threshold = config.iou_threshold
     self.weight_decay = config.weight_decay
 
@@ -202,18 +209,37 @@ class Model:
         padding='SAME')
 
   def output(self, x):
-    x = tf.reshape(x, [
-      tf.shape(x)[0], GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS,
-    ])
-    center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
+    with tf.name_scope('output', values=[ x ]):
+      batch_size = tf.shape(x)[0]
 
-    center = tf.sigmoid(center)
-    size = tf.exp(size) * self.prior_size
-    angle = tf.nn.l2_normalize(angle, axis=-1)
-    confidence = tf.sigmoid(confidence)
+      x = tf.reshape(x, [
+        batch_size, GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS,
+      ])
+      center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
 
-    return tf.concat([ center, size, angle, confidence ], axis=-1,
-        name='output')
+      center = tf.sigmoid(center)
+      size = tf.exp(size)
+      angle = tf.nn.l2_normalize(angle, axis=-1)
+      confidence = tf.sigmoid(confidence)
+
+      # Apply priors
+      with tf.name_scope('apply_prior_size', values=[ size, self.prior_size ]):
+        size *= self.prior_size
+
+      with tf.name_scope('apply_prior_angles',
+          values=[ angle, self.prior_rotations ]):
+        old_shape = tf.shape(angle)
+        angle = tf.reshape(angle,
+            shape=[ batch_size * GRID_SIZE * GRID_SIZE, GRID_DEPTH, 1, 2 ])
+        prior_rotations = tf.expand_dims(self.prior_rotations, axis=0)
+        prior_rotations = tf.tile(prior_rotations,
+            [ batch_size * GRID_SIZE * GRID_SIZE, 1, 1, 1 ])
+
+        angle = tf.matmul(angle, prior_rotations, transpose_b=True)
+        angle = tf.reshape(angle, shape=old_shape)
+
+      return tf.concat([ center, size, angle, confidence ], axis=-1,
+          name='output')
 
   def parse_box(self, input, name):
     center, size, angle, confidence = tf.split(input, [ 2, 2, 2, 1 ], axis=-1)
