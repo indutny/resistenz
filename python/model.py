@@ -159,9 +159,9 @@ class Model:
       size_loss = self.lambda_coord * size_loss * active_anchors
       angle_loss = self.lambda_coord * angle_loss * active_anchors
 
-      center_loss = sum_over_grid(center_loss)
-      size_loss = sum_over_grid(size_loss)
-      angle_loss = sum_over_grid(angle_loss)
+      center_loss = sum_over_grid(sum_over_cells(center_loss))
+      size_loss = sum_over_grid(sum_over_cells(size_loss))
+      angle_loss = sum_over_grid(sum_over_cells(angle_loss))
 
       center_loss = tf.reduce_mean(center_loss)
       size_loss = tf.reduce_mean(size_loss)
