@@ -6,7 +6,7 @@ def parse_args():
   # TODO(indutny): add image_size
   parser.add_argument('--name', type=str, default='default')
   parser.add_argument('--epochs', type=int, default=100000)
-  parser.add_argument('--batch_size', type=int, default=32)
+  parser.add_argument('--batch_size', type=int, default=64)
   parser.add_argument('--lr', type=float, default=0.001)
   parser.add_argument('--momentum', type=float, default=0.9)
   parser.add_argument('--weight_decay', type=float, default=5e-4)
