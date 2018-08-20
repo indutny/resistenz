@@ -97,9 +97,10 @@ with tf.Session() as sess:
   sess.graph.finalize()
   for i in range(0, args.epochs):
     print('Epoch {}'.format(i))
-    batches = 0
 
     sess.run([ training_iter.initializer, validation_iter.initializer ])
+
+    batches = 0
     while True:
       try:
         _, metrics, step, _ = sess.run([
@@ -107,21 +108,24 @@ with tf.Session() as sess:
           svg_op['training'],
         ])
         batches += 1
+
+        writer.add_summary(metrics, step)
+        writer.flush()
       except tf.errors.OutOfRangeError:
         break
-      writer.add_summary(metrics, step)
-      writer.flush()
+    print('Completed {} training batches'.format(batches))
 
+    batches = 0
     while True:
       try:
         metrics, step = sess.run([ validation_metrics, validation_step_inc ])
+        batches += 1
+
+        writer.add_summary(metrics, step)
+        writer.flush()
       except tf.errors.OutOfRangeError:
         break
-      writer.add_summary(metrics, step)
-      writer.flush()
-
-    # TODO(indutny): validation
-    print('Completed {} batches'.format(batches))
+    print('Completed {} validation batches'.format(batches))
 
     if i % args.save_every == 0:
       saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(i)))
