@@ -97,7 +97,7 @@ with tf.Session() as sess:
   writer = tf.summary.FileWriter(os.path.join(LOG_DIR, tag))
   writer.add_graph(tf.get_default_graph())
 
-  saver = tf.train.Saver(max_to_keep=100, name=tag)
+  saver = tf.train.Saver(max_to_keep=10, name=tag)
 
   sess.graph.finalize()
   epoch_value = sess.run(epoch)

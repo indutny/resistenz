@@ -19,7 +19,7 @@ def parse_args():
   parser.add_argument('--lr_fast_epoch', type=int, default=100)
   parser.add_argument('--lr_slow', type=float, default=0.001)
   parser.add_argument('--lr_slow_epoch', type=int, default=1000)
-  parser.add_argument('--save_every', type=int, default=10)
+  parser.add_argument('--save_every', type=int, default=100)
 
   args = parser.parse_args()
 
