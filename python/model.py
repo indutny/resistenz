@@ -152,8 +152,9 @@ class Model:
       total_loss = obj_loss + no_obj_loss + coord_loss + weight_loss
 
       # Some metrics
-      mean_iou = tf.reduce_sum(tf.reduce_sum(iou * active_anchors, axis=-1) / \
-          (tf.reduce_sum(active_anchors) + 1e-23))
+      mean_iou = sum_over_grid(sum_over_cells(iou * active_anchors))
+      mean_iou /= active_count + 1e-23
+      mean_iou = tf.reduce_mean(mean_iou)
 
       center_loss = self.lambda_coord * center_loss * active_anchors
       size_loss = self.lambda_coord * size_loss * active_anchors
