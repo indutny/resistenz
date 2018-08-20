@@ -182,7 +182,7 @@ class Dataset:
     polygons = tf.reshape(polygons, [ old_shape[0] * old_shape[1], 2 ])
 
     # Rotate
-    polygons = tf.matmul(polygons - center, matrix, transpose_b=True) + center
+    polygons = tf.matmul(polygons - center, matrix) + center
 
     # Restore shape
     polygons = tf.reshape(polygons, old_shape)
