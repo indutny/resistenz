@@ -4,10 +4,10 @@ import tensorflow as tf
 from utils import create_cell_starts
 
 class SVG:
-  def __init__(self, raw, grid, label):
+  def __init__(self, raw, grid, truth):
     self.raw = raw
     self.grid = grid
-    self.label = label
+    self.truth = truth
 
   def write_file(self, filename):
     with tf.name_scope('svg'):
@@ -33,34 +33,43 @@ class SVG:
 
       # Compute cell offsets
       grid_size = int(self.grid.shape[0])
-      grid_depth = int(self.grid.shape[2])
       grid_channels = int(self.grid.shape[3])
 
       cell_starts = create_cell_starts(grid_size) * float(grid_size)
       rest = tf.zeros([ grid_size, grid_size, 1, grid_channels - 2 ])
       cell_starts = tf.concat([ cell_starts, rest ], axis=-1)
 
-      # Add cell offsets
-      grid = self.grid + cell_starts
-
-      # Fix dimensions
-      grid = grid * tf.constant([
-        float(width) / grid_size , float(height) / grid_size,
-        float(width), float(height),
-        1, 1, 1 ]);
-
-      # Make grid linear
-      grid = tf.reshape(grid,
-          [ grid_size * grid_size * grid_depth, grid_channels ])
-
-      svg += tf.foldl(lambda acc, cell: acc + self.cell_to_polygon(cell), grid,
-          initializer=tf.constant('', tf.string))
+      svg += self.process_grid(self.grid, cell_starts, width, height)
+      svg += self.process_grid(self.truth, cell_starts, width, height,
+          is_truth=True)
 
       svg += '</svg>\n'
 
       return tf.write_file(filename, svg)
 
-  def cell_to_polygon(self, cell):
+  def process_grid(self, grid, cell_starts, width, height, is_truth=False):
+    grid_size = int(grid.shape[0])
+    grid_depth = int(grid.shape[2])
+    grid_channels = int(grid.shape[3])
+
+    # Add cell offsets
+    grid += cell_starts
+
+    # Fix dimensions
+    grid = grid * tf.constant([
+      float(width) / grid_size , float(height) / grid_size,
+      float(width), float(height),
+      1, 1, 1 ]);
+
+    # Make grid linear
+    grid = tf.reshape(grid,
+        [ grid_size * grid_size * grid_depth, grid_channels ])
+
+    return tf.foldl(lambda acc, cell: \
+        acc + self.cell_to_polygon(cell, is_truth=is_truth), grid,
+        initializer=tf.constant('', tf.string))
+
+  def cell_to_polygon(self, cell, is_truth=False):
     center, size, angle, confidence = tf.split(cell, [ 2, 2, 2, 1 ], axis=-1)
     confidence = tf.squeeze(confidence, axis=-1)
 
@@ -89,7 +98,10 @@ class SVG:
 
     alpha = tf.exp(1.0 - 1.0 / (confidence + 1e-23), name='alpha')
 
-    color = tf.where(confidence >= 0.5, '0,255,0', '255,0,0', name='color')
+    if is_truth:
+      color = '0,0,255'
+    else:
+      color = tf.where(confidence >= 0.5, '0,255,0', '255,0,0', name='color')
 
     fill = 'none'
     stroke = 'rgba(' +  color + ',' + tf.as_string(alpha) + ')'
