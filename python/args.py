@@ -24,12 +24,14 @@ def parse_args():
   args = parser.parse_args()
 
   tag = args.name
-  if args.batch_size != 32:
+  if args.batch_size != 64:
     tag += '_bs{}'.format(args.batch_size)
   if args.lr != 0.001:
     tag += '_lr{}'.format(args.lr)
   if args.momentum != 0.9:
     tag += '_mom{}'.format(args.momentum)
+  if args.weight_decay != 5e-4:
+    tag += '_wd{}'.format(args.weight_decay)
   if args.lr_fast != 0.01:
     tag += '_lrf{}'.format(args.lr_fast)
   if args.lr_fast_epoch != 100:
@@ -40,9 +42,7 @@ def parse_args():
     tag += '_lrse{}'.format(args.lr_slow_epoch)
   if args.iou_threshold != 0.5:
     tag += '_iou{}'.format(args.iou_threshold)
-  if args.weight_decay != 5e-4:
-    tag += '_wd{}'.format(args.weight_decay)
-  if args.lambda_angle != 1.0:
+  if args.lambda_angle != 0.1:
     tag += '_la{}'.format(args.lambda_angle)
   if args.lambda_obj != 1.0:
     tag += '_lo{}'.format(args.lambda_obj)
