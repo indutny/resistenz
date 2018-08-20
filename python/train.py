@@ -133,6 +133,6 @@ with tf.Session() as sess:
     print('Completed {} validation batches'.format(batches))
 
     if epoch_value % args.save_every == 0:
-      saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(i)))
+      saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(epoch_value)))
 
     epoch_value = sess.run(epoch_inc)
