@@ -11,6 +11,7 @@ def parse_args():
   parser.add_argument('--momentum', type=float, default=0.9)
   parser.add_argument('--weight_decay', type=float, default=5e-4)
   parser.add_argument('--iou_threshold', type=float, default=0.5)
+  parser.add_argument('--lambda_angle', type=float, default=0.1)
   parser.add_argument('--lambda_obj', type=float, default=1.0)
   parser.add_argument('--lambda_no_obj', type=float, default=1.0)
   parser.add_argument('--lambda_coord', type=float, default=5.0)
@@ -41,6 +42,8 @@ def parse_args():
     tag += '_iou{}'.format(args.iou_threshold)
   if args.weight_decay != 5e-4:
     tag += '_wd{}'.format(args.weight_decay)
+  if args.lambda_angle != 1.0:
+    tag += '_la{}'.format(args.lambda_angle)
   if args.lambda_obj != 1.0:
     tag += '_lo{}'.format(args.lambda_obj)
   if args.lambda_no_obj != 1.0:

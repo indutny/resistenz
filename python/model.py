@@ -14,6 +14,7 @@ class Model:
     self.iou_threshold = config.iou_threshold
     self.weight_decay = config.weight_decay
 
+    self.lambda_angle = config.lambda_angle
     self.lambda_obj = config.lambda_obj
     self.lambda_no_obj = config.lambda_no_obj
     self.lambda_coord = config.lambda_coord
@@ -124,7 +125,7 @@ class Model:
       size_loss = tf.reduce_mean(
           (tf.sqrt(prediction['size']) - tf.sqrt(labels['size'])) ** 2,
           axis=-1, name='size_loss')
-      angle_loss = angle_diff
+      angle_loss = angle_diff * self.lambda_angle
 
       coord_loss = self.lambda_coord * active_anchors * \
           (center_loss + size_loss + angle_loss)
