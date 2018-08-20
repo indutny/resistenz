@@ -63,16 +63,20 @@ class Dataset:
     validation_polygons = []
     training_images = []
     training_polygons = []
-    for image, polygon in zip(self.images, self.polygons):
+    for i, image in enumerate(self.images):
       if image.split('_', 1)[0] in validation_hashes:
         validation_images.append(image)
-        validation_polygons.append(polygon)
+        validation_polygons.append(i)
       else:
         training_images.append(image)
-        training_polygons.append(polygon)
+        training_polygons.append(i)
 
     print('Training dataset has {} images'.format(len(training_images)))
     print('Validation dataset has {} images'.format(len(validation_images)))
+
+    # Do this trick to preserve shape
+    training_polygons = self.polygons[training_polygons]
+    validation_polygons = self.polygons[validation_polygons]
 
     validation = self.load_single(validation_images, validation_polygons)
     training = self.load_single(training_images, training_polygons)
@@ -134,7 +138,9 @@ class Dataset:
       image = tf.image.random_brightness(image, self.brightness)
       image = tf.image.random_contrast(image, 1.0 - self.contrast, \
           1.0 + self.contrast)
-      image = tf.image.rot90(image, tf.random_uniform([], 0, 4, dtype=tf.int32))
+      rot_count = tf.random_uniform([], 0, 4, dtype=tf.int32)
+      image = tf.image.rot90(image, rot_count)
+      polygons = self.rot90_polygons(polygons, rot_count)
 
     #
     # Change image's type and value range
@@ -146,7 +152,7 @@ class Dataset:
   def load_single(self, images, polygons):
     return tf.data.Dataset.from_tensor_slices( \
         (tf.constant(images, dtype=tf.string), \
-         tf.constant(np.array(polygons), dtype=tf.float32),))
+         tf.constant(polygons, dtype=tf.float32),))
 
   def crop_polygons(self, polygons, crop_off, crop_size):
     # NOTE: `crop_off = [ height, width ]`
@@ -161,6 +167,26 @@ class Dataset:
     polygon_mask = tf.logical_and(polygon_mask[:, 0], polygon_mask[:, 1])
 
     return tf.where(polygon_mask, polygons, -tf.ones_like(polygons))
+
+  def rot90_polygons(self, polygons, rot_count):
+    angle = (math.pi / 2.0) * tf.cast(rot_count, dtype=tf.float32)
+
+    cos = tf.cos(angle)
+    sin = tf.sin(angle)
+
+    center = tf.constant([ self.image_size / 2.0 ], dtype=tf.float32)
+    matrix = tf.reshape(tf.stack([ cos, -sin, sin, cos ]), shape=[ 2, 2 ])
+
+    # Flatten
+    old_shape = polygons.shape
+    polygons = tf.reshape(polygons, [ old_shape[0] * old_shape[1], 2 ])
+
+    # Rotate
+    polygons = tf.matmul(polygons - center, matrix, transpose_b=True) + center
+
+    # Restore shape
+    polygons = tf.reshape(polygons, old_shape)
+    return polygons
 
   def polygons_to_grid(self, polygons):
     rects = self.polygons_to_rects(polygons)
