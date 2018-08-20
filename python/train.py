@@ -9,10 +9,11 @@ from svg import SVG
 # TODO(indutny): move these to args?
 LOG_DIR = os.path.join('.', 'logs')
 IMAGE_DIR = os.path.join('.', 'images')
-SAVE_DIR = os.path.join('.', 'saves')
 
 args, tag = parse_args()
 print('Running with a tag "{}"'.format(tag))
+
+SAVE_DIR = os.path.join('.', 'saves', tag)
 
 model = Model()
 
