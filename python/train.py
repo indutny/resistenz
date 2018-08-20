@@ -63,18 +63,19 @@ with tf.Session() as sess:
 
       return (1.0 - t) * from_val + t * to_val
 
-    initial = args.lr
-    fast = args.lr_fast
-    fast_epoch = args.lr_fast_epoch
-    slow = args.lr_slow
-    slow_epoch = args.lr_slow_epoch
+    with tf.name_scope('lr', values=[ step ]):
+      initial = args.lr
+      fast = args.lr_fast
+      fast_epoch = args.lr_fast_epoch
+      slow = args.lr_slow
+      slow_epoch = args.lr_slow_epoch
 
-    lr = tf.where(step < slow_epoch,
-        linear(fast_epoch, fast, slow_epoch, slow), slow)
-    lr = tf.where(step < fast_epoch,
-        linear(0, initial, fast_epoch, fast), lr)
+      lr = tf.where(step < slow_epoch,
+          linear(fast_epoch, fast, slow_epoch, slow), slow)
+      lr = tf.where(step < fast_epoch,
+          linear(0, initial, fast_epoch, fast), lr)
 
-    return lr
+      return lr
 
   lr = lr_schedule(global_step)
   training_metrics = tf.summary.merge([

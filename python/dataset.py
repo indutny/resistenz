@@ -9,11 +9,11 @@ from utils import create_cell_starts
 DIR = os.path.join('.', 'dataset', 'processed')
 
 class Dataset:
-  def __init__(self, image_size, grid_size, validate_split=0.15, max_crop=0.1,
+  def __init__(self, image_size, grid_size, validation_split=0.15, max_crop=0.1,
                saturation=0.5, brightness=0.2, contrast=0.2):
     self.image_size = image_size
     self.grid_size = grid_size
-    self.validate_split = validate_split
+    self.validation_split = validation_split
 
     self.max_crop = max_crop
     self.saturation = saturation
@@ -27,7 +27,8 @@ class Dataset:
     ]
     self.images = sorted(self.images)
 
-    self.base_hashes = list(set([ f.split('_', 1)[0] for f in self.images ]))
+    self.base_hashes = sorted(
+        list(set([ f.split('_', 1)[0] for f in self.images ])))
 
     self.polygons = []
     max_polys = 0
@@ -55,19 +56,26 @@ class Dataset:
     self.polygons = np.array(self.polygons)
 
   def load(self):
-    validate_count = int(len(self.base_hashes) * self.validate_split)
-    last_hash = self.base_hashes[validate_count]
+    validation_count = int(len(self.base_hashes) * self.validation_split)
+    validation_hashes = set(self.base_hashes[:validation_count])
 
-    for i, f in enumerate(self.images):
-      if f.split('_', 1)[0] == last_hash:
-        break
+    validation_images = []
+    validation_polygons = []
+    training_images = []
+    training_polygons = []
+    for image, polygon in zip(self.images, self.polygons):
+      if image.split('_', 1)[0] in validation_hashes:
+        validation_images.append(image)
+        validation_polygons.append(polygon)
+      else:
+        training_images.append(image)
+        training_polygons.append(polygon)
 
-    validate_count = i
+    print('Training dataset has {} images'.format(len(training_images)))
+    print('Validation dataset has {} images'.format(len(validation_images)))
 
-    validation = self.load_single(self.images[:validate_count], \
-        self.polygons[:validate_count])
-    training = self.load_single(self.images[validate_count:], \
-        self.polygons[validate_count:])
+    validation = self.load_single(validation_images, validation_polygons)
+    training = self.load_single(training_images, training_polygons)
 
     training = training.map( \
         lambda img, polys: self.process_image(img, polys, True))
@@ -138,7 +146,7 @@ class Dataset:
   def load_single(self, images, polygons):
     return tf.data.Dataset.from_tensor_slices( \
         (tf.constant(images, dtype=tf.string), \
-         tf.constant(polygons, dtype=tf.float32),))
+         tf.constant(np.array(polygons), dtype=tf.float32),))
 
   def crop_polygons(self, polygons, crop_off, crop_size):
     # NOTE: `crop_off = [ height, width ]`

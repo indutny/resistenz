@@ -12,16 +12,21 @@ class Model:
   def __init__(self,
                prior_size=PRIOR_SIZE,
                iou_threshold=0.5,
+               weight_decay=5e-5,
                lambda_obj=1.0, lambda_no_obj=1.0, lambda_coord=5.0):
     self.prior_size = tf.constant(prior_size, dtype=tf.float32)
     self.iou_threshold = iou_threshold
+    self.weight_decay = weight_decay
 
     self.lambda_obj = lambda_obj
     self.lambda_no_obj = lambda_no_obj
     self.lambda_coord = lambda_coord
 
+    self.trainable_variables = None
+
   def forward(self, image, training=False):
-    with tf.variable_scope('resistenz', reuse=tf.AUTO_REUSE, values=[ image ]):
+    with tf.variable_scope('resistenz', reuse=tf.AUTO_REUSE, \
+        values=[ image ]) as scope:
       x = image
 
       # TODO(indutny): noise during training
@@ -53,6 +58,8 @@ class Model:
           name='last', activation=None, training=training)
 
       x = self.output(x)
+
+      self.trainable_variables = scope.trainable_variables()
 
       return x
 
@@ -137,10 +144,15 @@ class Model:
       no_obj_loss = tf.reduce_mean(no_obj_loss)
       coord_loss = tf.reduce_mean(coord_loss)
 
-      # TODO(indutny): weight decay
+      # Weight decay
+      weight_loss = 0.0
+      for var in self.trainable_variables:
+        if not 'bn_' in var.name:
+          weight_loss += tf.nn.l2_loss(var)
+      weight_loss *= self.weight_decay
 
       # Total
-      total_loss = obj_loss + no_obj_loss + coord_loss
+      total_loss = obj_loss + no_obj_loss + coord_loss + weight_loss
 
       # Some metrics
       mean_iou = tf.reduce_sum(tf.reduce_sum(iou * active_anchors, axis=-1) / \
@@ -168,6 +180,7 @@ class Model:
       tf.summary.scalar('{}/size_loss'.format(tag), size_loss),
       tf.summary.scalar('{}/angle_loss'.format(tag), angle_loss),
       tf.summary.scalar('{}/loss'.format(tag), total_loss),
+      tf.summary.scalar('{}/weight_loss'.format(tag), weight_loss),
     ]
 
     return total_loss, tf.summary.merge(metrics)
