@@ -15,7 +15,7 @@ print('Running with a tag "{}"'.format(tag))
 
 SAVE_DIR = os.path.join('.', 'saves', tag)
 
-model = Model()
+model = Model(args)
 
 with tf.Session() as sess:
   dataset = Dataset(image_size=IMAGE_SIZE, grid_size=GRID_SIZE)

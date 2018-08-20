@@ -9,18 +9,14 @@ GRID_CHANNELS = 7
 PRIOR_SIZE = [ 0.15653530649021333, 0.0697987945243159 ]
 
 class Model:
-  def __init__(self,
-               prior_size=PRIOR_SIZE,
-               iou_threshold=0.5,
-               weight_decay=5e-5,
-               lambda_obj=1.0, lambda_no_obj=1.0, lambda_coord=5.0):
+  def __init__(self, config, prior_size=PRIOR_SIZE):
     self.prior_size = tf.constant(prior_size, dtype=tf.float32)
-    self.iou_threshold = iou_threshold
-    self.weight_decay = weight_decay
+    self.iou_threshold = config.iou_threshold
+    self.weight_decay = config.weight_decay
 
-    self.lambda_obj = lambda_obj
-    self.lambda_no_obj = lambda_no_obj
-    self.lambda_coord = lambda_coord
+    self.lambda_obj = config.lambda_obj
+    self.lambda_no_obj = config.lambda_no_obj
+    self.lambda_coord = config.lambda_coord
 
     self.trainable_variables = None
 

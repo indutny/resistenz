@@ -9,6 +9,11 @@ def parse_args():
   parser.add_argument('--batch_size', type=int, default=32)
   parser.add_argument('--lr', type=float, default=0.001)
   parser.add_argument('--momentum', type=float, default=0.9)
+  parser.add_argument('--weight_decay', type=float, default=5e-4)
+  parser.add_argument('--iou_threshold', type=float, default=0.5)
+  parser.add_argument('--lambda_obj', type=float, default=1.0)
+  parser.add_argument('--lambda_no_obj', type=float, default=1.0)
+  parser.add_argument('--lambda_coord', type=float, default=5.0)
   parser.add_argument('--lr_fast', type=float, default=0.01)
   parser.add_argument('--lr_fast_epoch', type=int, default=100)
   parser.add_argument('--lr_slow', type=float, default=0.001)
@@ -32,5 +37,15 @@ def parse_args():
     tag += '_lrs{}'.format(args.lr_slow)
   if args.lr_slow_epoch != 500:
     tag += '_lrse{}'.format(args.lr_slow_epoch)
+  if args.iou_threshold != 0.5:
+    tag += '_iou{}'.format(args.iou_threshold)
+  if args.weight_decay != 5e-4:
+    tag += '_wd{}'.format(args.weight_decay)
+  if args.lambda_obj != 1.0:
+    tag += '_lo{}'.format(args.lambda_obj)
+  if args.lambda_no_obj != 1.0:
+    tag += '_lno{}'.format(args.lambda_no_obj)
+  if args.lambda_coord != 5.0:
+    tag += '_lc{}'.format(args.lambda_coord)
 
   return args, tag
