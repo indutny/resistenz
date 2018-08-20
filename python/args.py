@@ -38,7 +38,7 @@ def parse_args():
     tag += '_lrfe{}'.format(args.lr_fast_epoch)
   if args.lr_slow != 0.001:
     tag += '_lrs{}'.format(args.lr_slow)
-  if args.lr_slow_epoch != 500:
+  if args.lr_slow_epoch != 1000:
     tag += '_lrse{}'.format(args.lr_slow_epoch)
   if args.iou_threshold != 0.5:
     tag += '_iou{}'.format(args.iou_threshold)
