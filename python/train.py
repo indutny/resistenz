@@ -43,6 +43,9 @@ with tf.Session() as sess:
   }
 
   # Steps
+  epoch = tf.Variable(name='epoch', initial_value=0, dtype=tf.int32)
+  epoch_inc = epoch.assign_add(1)
+
   global_step = tf.Variable(name='global_step', initial_value=0, dtype=tf.int32)
   validation_step = tf.Variable(name='validation_step', initial_value=0,
       dtype=tf.int32)
@@ -55,29 +58,29 @@ with tf.Session() as sess:
       model.loss_and_metrics(validation_pred, validation_batch[1], 'val')
 
   # Learing rate schedule
-  def lr_schedule(step):
+  def lr_schedule(epoch):
     def linear(from_epoch, from_val, to_epoch, to_val):
-      t = tf.to_float(step) - tf.constant(from_epoch, dtype=tf.float32)
+      t = tf.to_float(epoch) - tf.constant(from_epoch, dtype=tf.float32)
       t /= tf.constant(to_epoch - from_epoch, dtype=tf.float32)
       t = tf.clip_by_value(t, 0.0, 1.0)
 
       return (1.0 - t) * from_val + t * to_val
 
-    with tf.name_scope('lr', values=[ step ]):
+    with tf.name_scope('lr', values=[ epoch ]):
       initial = args.lr
       fast = args.lr_fast
       fast_epoch = args.lr_fast_epoch
       slow = args.lr_slow
       slow_epoch = args.lr_slow_epoch
 
-      lr = tf.where(step < slow_epoch,
+      lr = tf.where(epoch < slow_epoch,
           linear(fast_epoch, fast, slow_epoch, slow), slow)
-      lr = tf.where(step < fast_epoch,
+      lr = tf.where(epoch < fast_epoch,
           linear(0, initial, fast_epoch, fast), lr)
 
       return lr
 
-  lr = lr_schedule(global_step)
+  lr = lr_schedule(epoch)
   training_metrics = tf.summary.merge([
     training_metrics,
     tf.summary.scalar('train/lr', lr),
@@ -96,8 +99,9 @@ with tf.Session() as sess:
   saver = tf.train.Saver(max_to_keep=100, name=tag)
 
   sess.graph.finalize()
-  for i in range(0, args.epochs):
-    print('Epoch {}'.format(i))
+  epoch_value = sess.run(epoch)
+  while epoch_value < args.epochs:
+    print('Epoch {}'.format(epoch_value))
 
     sess.run([ training_iter.initializer, validation_iter.initializer ])
 
@@ -128,5 +132,7 @@ with tf.Session() as sess:
         break
     print('Completed {} validation batches'.format(batches))
 
-    if i % args.save_every == 0:
+    if epoch_value % args.save_every == 0:
       saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(i)))
+
+    epoch_value = sess.run(epoch_inc)
