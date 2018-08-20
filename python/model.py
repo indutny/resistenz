@@ -153,7 +153,6 @@ class Model:
 
       # Some metrics
       mean_iou = sum_over_grid(sum_over_cells(iou * active_anchors))
-      mean_iou /= active_count + 1e-23
       mean_iou = tf.reduce_mean(mean_iou)
 
       center_loss = self.lambda_coord * center_loss * active_anchors
