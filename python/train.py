@@ -38,9 +38,13 @@ with tf.Session() as sess:
   validation_pred = model.forward(validation_batch[0])
 
   # Encode first images of each epoch for debugging purposes
+  def svg_op(batch, pred, fname):
+    svg = SVG(batch[0][0], pred[0], batch[1][0])
+    return svg.write_file(os.path.join(IMAGE_DIR, fname))
+
   svg_op = {
-    'training': SVG(training_batch[0][0], training_pred[0], \
-        training_batch[1][0]).write_file(os.path.join(IMAGE_DIR, 'train.svg')),
+    'training': svg_op(training_batch, training_pred, 'train.svg'),
+    'validation': svg_op(validation_batch, validation_pred, 'validate.svg'),
   }
 
   # Steps
@@ -124,7 +128,10 @@ with tf.Session() as sess:
     batches = 0
     while True:
       try:
-        metrics, step = sess.run([ validation_metrics, validation_step_inc ])
+        metrics, step, _ = sess.run([
+          validation_metrics, validation_step_inc,
+          svg_op['validation'],
+        ])
         batches += 1
 
         writer.add_summary(metrics, step)
