@@ -16,8 +16,6 @@ print('Running with a tag "{}"'.format(tag))
 
 model = Model()
 
-optimizer = tf.train.MomentumOptimizer(args.lr, args.momentum)
-
 with tf.Session() as sess:
   dataset = Dataset(image_size=IMAGE_SIZE, grid_size=GRID_SIZE)
 
@@ -35,7 +33,7 @@ with tf.Session() as sess:
 
   # Predictions
   # NOTE: yes, this compiles both twice... but perhaps it is faster this way?
-  training_pred = model.forward(training_batch[0])
+  training_pred = model.forward(training_batch[0], training=True)
   validation_pred = model.forward(validation_batch[0])
 
   # Encode first images of each epoch for debugging purposes
@@ -56,7 +54,38 @@ with tf.Session() as sess:
   validation_loss, validation_metrics = \
       model.loss_and_metrics(validation_pred, validation_batch[1], 'val')
 
-  minimize = optimizer.minimize(training_loss, global_step)
+  # Learing rate schedule
+  def lr_schedule(step):
+    def linear(from_epoch, from_val, to_epoch, to_val):
+      t = tf.to_float(step) - tf.constant(from_epoch, dtype=tf.float32)
+      t /= tf.constant(to_epoch - from_epoch, dtype=tf.float32)
+      t = tf.clip_by_value(t, 0.0, 1.0)
+
+      return (1.0 - t) * from_val + t * to_val
+
+    initial = args.lr
+    fast = args.lr_fast
+    fast_epoch = args.lr_fast_epoch
+    slow = args.lr_slow
+    slow_epoch = args.lr_slow_epoch
+
+    lr = tf.where(step < slow_epoch,
+        linear(fast_epoch, fast, slow_epoch, slow), slow)
+    lr = tf.where(step < fast_epoch,
+        linear(0, initial, fast_epoch, fast), lr)
+
+    return lr
+
+  lr = lr_schedule(global_step)
+  training_metrics = tf.summary.merge([
+    training_metrics,
+    tf.summary.scalar('train/lr', lr),
+  ])
+
+  update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+  with tf.control_dependencies(update_ops):
+    optimizer = tf.train.MomentumOptimizer(lr, args.momentum)
+    minimize = optimizer.minimize(training_loss, global_step)
 
   sess.run(tf.global_variables_initializer())
 

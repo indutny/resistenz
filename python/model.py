@@ -12,7 +12,7 @@ class Model:
   def __init__(self,
                prior_size=PRIOR_SIZE,
                iou_threshold=0.5,
-               lambda_obj=1.0, lambda_no_obj=0.5, lambda_coord=5.0):
+               lambda_obj=1.0, lambda_no_obj=1.0, lambda_coord=5.0):
     self.prior_size = tf.constant(prior_size, dtype=tf.float32)
     self.iou_threshold = iou_threshold
 
@@ -20,34 +20,37 @@ class Model:
     self.lambda_no_obj = lambda_no_obj
     self.lambda_coord = lambda_coord
 
-  def forward(self, image):
+  def forward(self, image, training=False):
     with tf.variable_scope('resistenz', reuse=tf.AUTO_REUSE, values=[ image ]):
       x = image
 
       # TODO(indutny): noise during training
 
-      x = self.conv_bn(x, filters=16, size=3, name='1')
+      x = self.conv_bn(x, filters=16, size=3, name='1', training=training)
       x = self.max_pool(x, size=2, stride=2, name='1')
-      x = self.conv_bn(x, filters=32, size=3, name='2')
+      x = self.conv_bn(x, filters=32, size=3, name='2', training=training)
       x = self.max_pool(x, size=2, stride=2, name='2')
-      x = self.conv_bn(x, filters=64, size=3, name='3')
+      x = self.conv_bn(x, filters=64, size=3, name='3', training=training)
       x = self.max_pool(x, size=2, stride=2, name='3')
-      x = self.conv_bn(x, filters=128, size=3, name='4')
+      x = self.conv_bn(x, filters=128, size=3, name='4', training=training)
       x = self.max_pool(x, size=2, stride=2, name='4')
-      x = self.conv_bn(x, filters=256, size=3, name='5')
+      x = self.conv_bn(x, filters=256, size=3, name='5', training=training)
       x = self.max_pool(x, size=2, stride=2, name='5')
-      x = self.conv_bn(x, filters=512, size=3, name='6')
+      x = self.conv_bn(x, filters=512, size=3, name='6', training=training)
       x = self.max_pool(x, size=2, stride=1, name='6')
-      x = self.conv_bn(x, filters=1024, size=3, name='pre_final')
+      x = self.conv_bn(x, filters=1024, size=3, name='pre_final',
+          training=training)
 
       # TODO(indutny): residual routes
 
       ####
 
-      x = self.conv_bn(x, filters=256, size=1, name='final_1')
-      x = self.conv_bn(x, filters=512, size=3, name='final_2')
+      x = self.conv_bn(x, filters=256, size=1, name='final_1',
+          training=training)
+      x = self.conv_bn(x, filters=512, size=3, name='final_2',
+          training=training)
       x = self.conv_bn(x, filters=GRID_DEPTH * GRID_CHANNELS, size=1,
-          name='last', activation=None)
+          name='last', activation=None, training=training)
 
       x = self.output(x)
 
@@ -171,11 +174,14 @@ class Model:
 
   # Helpers
 
-  def conv_bn(self, input, filters, size, name, activation=tf.nn.leaky_relu):
+  def conv_bn(self, input, filters, size, name, \
+              activation=lambda x: tf.nn.leaky_relu(x, alpha=0.1),
+              training=False):
     x = tf.layers.conv2d(input, filters=filters, kernel_size=size, \
         padding='SAME',
         name='conv_{}'.format(name))
     x = tf.layers.batch_normalization(x, momentum=0.9, epsilon=1e-5,
+        training=training,
         name='bn_{}'.format(name))
     if not activation is None:
       x = activation(x)

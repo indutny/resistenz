@@ -25,6 +25,9 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
+    self.images = sorted(self.images)
+
+    self.base_hashes = list(set([ f.split('_', 1)[0] for f in self.images ]))
 
     self.polygons = []
     max_polys = 0
@@ -52,7 +55,15 @@ class Dataset:
     self.polygons = np.array(self.polygons)
 
   def load(self):
-    validate_count = int(len(self.images) * self.validate_split)
+    validate_count = int(len(self.base_hashes) * self.validate_split)
+    last_hash = self.base_hashes[validate_count]
+
+    for i, f in enumerate(self.images):
+      if f.split('_', 1)[0] == last_hash:
+        break
+
+    validate_count = i
+
     validation = self.load_single(self.images[:validate_count], \
         self.polygons[:validate_count])
     training = self.load_single(self.images[validate_count:], \
