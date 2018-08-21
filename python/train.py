@@ -64,12 +64,18 @@ with tf.Session() as sess:
 
   # Learing rate schedule
   def lr_schedule(epoch):
-    def linear(from_epoch, from_val, to_epoch, to_val):
+    def spline(from_epoch, from_val, to_epoch, to_val):
       t = tf.to_float(epoch) - tf.constant(from_epoch, dtype=tf.float32)
       t /= tf.constant(to_epoch - from_epoch, dtype=tf.float32)
       t = tf.clip_by_value(t, 0.0, 1.0)
 
-      return (1.0 - t) * from_val + t * to_val
+      a = 2.0 * (from_val - to_val)
+      b = 3.0 * (to_val - from_val)
+      d = from_val
+
+      res = a * t ** 3 + b * t ** 2 + d
+
+      return res
 
     with tf.name_scope('lr', values=[ epoch ]):
       initial = args.lr
@@ -79,9 +85,9 @@ with tf.Session() as sess:
       slow_epoch = args.lr_slow_epoch
 
       lr = tf.where(epoch < slow_epoch,
-          linear(fast_epoch, fast, slow_epoch, slow), slow)
+          spline(fast_epoch, fast, slow_epoch, slow), slow)
       lr = tf.where(epoch < fast_epoch,
-          linear(0, initial, fast_epoch, fast), lr)
+          spline(0, initial, fast_epoch, fast), lr)
 
       return lr
 
