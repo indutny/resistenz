@@ -86,51 +86,46 @@ class Dataset:
     validation = validation.map( \
         lambda img, polys: self.process_image(img, polys, False))
 
-    training = training.shuffle(buffer_size=10000)
-
     return training, validation
+
+  def load_single(self, images, polygons):
+    dataset =  tf.data.Dataset.from_tensor_slices( \
+        (tf.constant(images, dtype=tf.string), \
+         tf.constant(polygons, dtype=tf.float32),))
+
+    return dataset.shuffle(buffer_size=10000)
 
   def process_image(self, image, polygons, training):
     image = tf.read_file(image)
     image = tf.image.decode_jpeg(image, channels=3)
 
-    size = tf.shape(image)[:2]
-    width = size[1]
-    height = size[0]
-
-    #
-    # TODO(indutny): do a minor crop
-    #
-
     #
     # Do a major crop to fit image into a square
     #
-    crop_size = tf.reduce_min(size, axis=-1, name='crop_size')
-    size_delta = size - crop_size
+    image, polygons = self.major_crop(image, polygons, training)
+
     if training:
-      # Random crop for training
-      crop_off = tf.cast(size_delta, dtype=tf.float32) * \
-          tf.random_uniform([ 2 ])
-      crop_off = tf.cast(crop_off, dtype=tf.int32)
-    else:
-      # Central crop for validation
-      crop_off = size_delta // 2
+      #
+      # Do a rotation on full-size image
+      #
+      image, polygons = self.random_rotate(image, polygons)
 
-    polygons = self.crop_polygons(polygons, crop_off, crop_size)
-
-    image = tf.image.crop_to_bounding_box(image, crop_off[0], crop_off[1], \
-        crop_size, crop_size)
+      #
+      # Do a minor crop
+      #
+      image, polygons = self.minor_crop(image, polygons)
 
     #
     # Resize all images to target size
     #
+    crop_size = tf.shape(image)[0]
     image = tf.image.resize_images(image, [ self.image_size, self.image_size ],
         method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     polygons = polygons * float(self.image_size) / \
         tf.cast(crop_size, dtype=tf.float32)
 
     #
-    # Augment image
+    # Color/brightness manipulation
     #
     if training:
       image = tf.image.random_saturation(image, 1.0 - self.saturation,
@@ -149,10 +144,34 @@ class Dataset:
     image /= 255.0
     return image, self.polygons_to_grid(polygons)
 
-  def load_single(self, images, polygons):
-    return tf.data.Dataset.from_tensor_slices( \
-        (tf.constant(images, dtype=tf.string), \
-         tf.constant(polygons, dtype=tf.float32),))
+  def random_rotate(self, image, polygons):
+    # TODO(indutny): implement me
+    return image, polygons
+
+  def major_crop(self, image, polygons, training):
+    size = tf.shape(image)[:2]
+    width = size[1]
+    height = size[0]
+
+    crop_size = tf.reduce_min(size, axis=-1, name='crop_size')
+    size_delta = size - crop_size
+    if training:
+      # Random crop for training
+      crop_off = tf.cast(size_delta, dtype=tf.float32) * \
+          tf.random_uniform([ 2 ])
+      crop_off = tf.cast(crop_off, dtype=tf.int32)
+    else:
+      # Central crop for validation
+      crop_off = size_delta // 2
+
+    image = tf.image.crop_to_bounding_box(image, crop_off[0], crop_off[1], \
+        crop_size, crop_size)
+    polygons = self.crop_polygons(polygons, crop_off, crop_size)
+    return image, polygons
+
+  def minor_crop(self, image, polygons):
+    # TODO(indutny): implement me
+    return image, polygons
 
   def crop_polygons(self, polygons, crop_off, crop_size):
     # NOTE: `crop_off = [ height, width ]`
