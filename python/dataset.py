@@ -10,7 +10,7 @@ DIR = os.path.join('.', 'dataset', 'processed')
 
 class Dataset:
   def __init__(self, image_size, grid_size, validation_split=0.15, max_crop=0.1,
-               saturation=0.5, brightness=0.2, contrast=0.2):
+               saturation=0.5, brightness=0.2, contrast=0.2, noise_dev=0.03):
     self.image_size = image_size
     self.grid_size = grid_size
     self.validation_split = validation_split
@@ -19,6 +19,7 @@ class Dataset:
     self.saturation = saturation
     self.brightness = brightness
     self.contrast = contrast
+    self.noise_dev = noise_dev
 
     self.images = [
         os.path.join(DIR, f)
@@ -119,8 +120,13 @@ class Dataset:
     # Resize all images to target size
     #
     crop_size = tf.shape(image)[0]
-    image = tf.image.resize_images(image, [ self.image_size, self.image_size ],
-        method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
+    check_size = tf.assert_greater_equal(crop_size, self.image_size)
+    with tf.control_dependencies([ check_size ]):
+      image = tf.image.resize_images(image,
+          [ self.image_size, self.image_size ],
+          method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
     polygons = polygons * float(self.image_size) / \
         tf.cast(crop_size, dtype=tf.float32)
 
@@ -142,6 +148,14 @@ class Dataset:
     #
     image = tf.cast(image, dtype=tf.float32)
     image /= 255.0
+
+    #
+    # Add gaussian noise
+    #
+    if training:
+      image += tf.random_normal(shape=tf.shape(image), stddev=self.noise_dev)
+      image = tf.clip_by_value(image, 0.0, 1.0)
+
     return image, self.polygons_to_grid(polygons)
 
   def random_rotate(self, image, polygons):
