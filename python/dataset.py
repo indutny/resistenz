@@ -170,7 +170,25 @@ class Dataset:
     return image, polygons
 
   def minor_crop(self, image, polygons):
-    # TODO(indutny): implement me
+    width = tf.shape(image)[0]
+    float_width = tf.cast(width, dtype=tf.float32)
+
+    max_allowed_crop = 1 - self.image_size / (float_width + 1e-23)
+    max_allowed_crop /= 2.0
+    max_allowed_crop = tf.minimum(self.max_crop, max_allowed_crop)
+
+    crop_off = tf.random_uniform([], 0.0, max_allowed_crop) * float_width
+    crop_off = tf.cast(crop_off, dtype=tf.int32)
+
+    crop_size = width - 2 * crop_off
+
+    image = tf.image.crop_to_bounding_box(image, crop_off, crop_off,
+        crop_size, crop_size)
+
+    # `crop_polygons` expend 2-dim off and size
+    crop_off = tf.tile(tf.expand_dims(crop_off, axis=0), [ 2 ])
+    crop_size = tf.tile(tf.expand_dims(crop_size, axis=0), [ 2 ])
+    polygons = self.crop_polygons(polygons, crop_off, crop_size)
     return image, polygons
 
   def crop_polygons(self, polygons, crop_off, crop_size):
