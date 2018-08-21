@@ -7,7 +7,7 @@ import jimp = require('jimp');
 
 import { IPoint, IRect, Polygon, polygonCenter } from '../src/utils';
 
-const TARGET_WIDTH = 416 * 1.5;
+const TARGET_WIDTH = 416;
 const TARGET_HEIGHT = TARGET_WIDTH;
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
@@ -34,7 +34,13 @@ class Image {
 
       const clone = this.raw.clone();
 
-      clone.crop(frame.x, frame.y, frame.width, frame.height);
+      try {
+        clone.crop(frame.x, frame.y, frame.width, frame.height);
+      } catch (e) {
+        console.error(e.stack);
+        console.error('Skipping...');
+        continue;
+      }
 
       let subPolygons = this.polygons.filter((poly) => {
         const c = polygonCenter(poly);
@@ -49,7 +55,7 @@ class Image {
 
       assert.strictEqual(TARGET_WIDTH, TARGET_HEIGHT);
       const scale =
-          Math.min(1, TARGET_WIDTH / Math.min(frame.width, frame.height));
+          Math.min(1, 2 * TARGET_WIDTH / Math.min(frame.width, frame.height));
 
       // Resize to save space
       clone.scale(scale, jimp.RESIZE_NEAREST_NEIGHBOR);
@@ -113,7 +119,7 @@ async function run() {
     }
 
     const polygons: Polygon[] = [];
-    for (let { geometry } of data['Label']['Resistor']) {
+    for (let { geometry } of (data['Label']['Resistor'] || [])) {
       geometry = geometry.map(translate);
 
       polygons.push(geometry);
