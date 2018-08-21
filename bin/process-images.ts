@@ -6,7 +6,9 @@ import { promisify } from 'util';
 import jimp = require('jimp');
 
 import { IPoint, IRect, Polygon, polygonCenter } from '../src/utils';
-import { TARGET_WIDTH, TARGET_HEIGHT } from '../src/input';
+
+const TARGET_WIDTH = 416 * 1.5;
+const TARGET_HEIGHT = TARGET_WIDTH;
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const LABELS_FILE = path.join(DATASET_DIR, 'labels.json');
@@ -26,7 +28,7 @@ class Image {
 
     let i = 0;
     for (const frame of frames) {
-      if (frame.width < 2 * TARGET_WIDTH || frame.height < 2 * TARGET_HEIGHT) {
+      if (frame.width < TARGET_WIDTH || frame.height < TARGET_HEIGHT) {
         continue;
       }
 
@@ -47,7 +49,7 @@ class Image {
 
       assert.strictEqual(TARGET_WIDTH, TARGET_HEIGHT);
       const scale =
-          Math.min(1, 2 * TARGET_WIDTH / Math.min(frame.width, frame.height));
+          Math.min(1, TARGET_WIDTH / Math.min(frame.width, frame.height));
 
       // Resize to save space
       clone.scale(scale, jimp.RESIZE_NEAREST_NEIGHBOR);
