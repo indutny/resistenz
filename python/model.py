@@ -208,10 +208,10 @@ class Model:
     x = tf.layers.conv2d(input, filters=filters, kernel_size=size, \
         padding='SAME',
         name='conv_{}'.format(name))
-    x = tf.layers.batch_normalization(x, momentum=0.9, epsilon=1e-5,
-        training=training,
-        name='bn_{}'.format(name))
     if not activation is None:
+      x = tf.layers.batch_normalization(x, momentum=0.9, epsilon=1e-5,
+          training=training,
+          name='bn_{}'.format(name))
       x = activation(x)
     return x
 
