@@ -5,7 +5,6 @@ from utils import gen_rot_matrix
 IMAGE_SIZE = 416
 # TODO(indutny): there is no reason to not calculate grid_size automatically
 GRID_SIZE = 13
-GRID_DEPTH = 5
 GRID_CHANNELS = 7
 
 #
@@ -31,6 +30,7 @@ class Model:
     ], name='prior_rotations')
     self.iou_threshold = config.iou_threshold
     self.weight_decay = config.weight_decay
+    self.grid_depth = config.grid_depth
 
     self.lambda_angle = config.lambda_angle
     self.lambda_obj = config.lambda_obj
@@ -69,7 +69,7 @@ class Model:
           training=training)
       x = self.conv_bn(x, filters=512, size=3, name='final_2',
           training=training)
-      x = self.conv_bn(x, filters=GRID_DEPTH * GRID_CHANNELS, size=1,
+      x = self.conv_bn(x, filters=self.grid_depth * GRID_CHANNELS, size=1,
           name='last', activation=None, training=training)
 
       x = self.output(x)
@@ -100,8 +100,8 @@ class Model:
       abs_cos_diff = tf.abs(1.0 - angle_diff, name='abs_cos_diff')
 
       iou *= abs_cos_diff
-      max_iou = tf.one_hot(tf.argmax(iou, axis=-1), depth=GRID_DEPTH, axis=-1,
-          on_value=True, off_value=False, dtype=tf.bool)
+      max_iou = tf.one_hot(tf.argmax(iou, axis=-1), depth=self.grid_depth,
+          axis=-1, on_value=True, off_value=False, dtype=tf.bool)
 
       # Compute masks
       active_anchors = tf.logical_or(iou >= self.iou_threshold, max_iou)
@@ -121,7 +121,7 @@ class Model:
       active_count = tf.expand_dims(active_count, axis=-1)
       active_count = tf.expand_dims(active_count, axis=-1)
 
-      inactive_count = GRID_SIZE * GRID_SIZE * GRID_DEPTH - active_count
+      inactive_count = GRID_SIZE * GRID_SIZE * self.grid_depth - active_count
 
       active_anchors /= active_count + 1e-23
       inactive_anchors /= inactive_count + 1e-23
@@ -224,7 +224,7 @@ class Model:
       batch_size = tf.shape(x)[0]
 
       x = tf.reshape(x, [
-        batch_size, GRID_SIZE, GRID_SIZE, GRID_DEPTH, GRID_CHANNELS,
+        batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth, GRID_CHANNELS,
       ])
       center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
 
@@ -241,7 +241,7 @@ class Model:
           values=[ angle, self.prior_rotations ]):
         old_shape = tf.shape(angle)
         angle = tf.reshape(angle,
-            shape=[ batch_size * GRID_SIZE * GRID_SIZE, GRID_DEPTH, 1, 2 ])
+            shape=[ batch_size * GRID_SIZE * GRID_SIZE, self.grid_depth, 1, 2 ])
         prior_rotations = tf.expand_dims(self.prior_rotations, axis=0)
         prior_rotations = tf.tile(prior_rotations,
             [ batch_size * GRID_SIZE * GRID_SIZE, 1, 1, 1 ])
