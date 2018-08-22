@@ -143,7 +143,7 @@ class Model:
       size_loss = tf.reduce_mean(
           (tf.sqrt(prediction['size']) - tf.sqrt(labels['size'])) ** 2,
           axis=-1, name='size_loss')
-      angle_loss = angle_diff * self.lambda_angle
+      angle_loss = self.lambda_angle * (1.0 - abs_cos_diff)
 
       coord_loss = self.lambda_coord * active_anchors * \
           (center_loss + size_loss + angle_loss)
