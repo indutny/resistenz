@@ -18,7 +18,7 @@ def parse_args():
   parser.add_argument('--lr_fast', type=float, default=0.01)
   parser.add_argument('--lr_fast_epoch', type=int, default=100)
   parser.add_argument('--lr_slow', type=float, default=0.001)
-  parser.add_argument('--lr_slow_epoch', type=int, default=1000)
+  parser.add_argument('--lr_slow_epoch', type=int, default=5000)
   parser.add_argument('--save_every', type=int, default=100)
 
   args = parser.parse_args()
@@ -38,7 +38,7 @@ def parse_args():
     tag += '_lrfe{}'.format(args.lr_fast_epoch)
   if args.lr_slow != 0.001:
     tag += '_lrs{}'.format(args.lr_slow)
-  if args.lr_slow_epoch != 1000:
+  if args.lr_slow_epoch != 5000:
     tag += '_lrse{}'.format(args.lr_slow_epoch)
   if args.iou_threshold != 0.5:
     tag += '_iou{}'.format(args.iou_threshold)
