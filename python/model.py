@@ -44,8 +44,6 @@ class Model:
         values=[ image ]) as scope:
       x = image
 
-      # TODO(indutny): noise during training
-
       x = self.conv_bn(x, filters=16, size=3, name='1', training=training)
       x = self.max_pool(x, size=2, stride=2, name='1')
       x = self.conv_bn(x, filters=32, size=3, name='2', training=training)

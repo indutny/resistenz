@@ -10,7 +10,7 @@ DIR = os.path.join('.', 'dataset', 'processed')
 
 class Dataset:
   def __init__(self, image_size, grid_size, validation_split=0.15, max_crop=0.1,
-               saturation=0.5, brightness=0.2, contrast=0.2, noise_dev=0.03,
+               saturation=0.5, exposure=0.2, noise_dev=0.03,
                hue=0.05):
     self.image_size = image_size
     self.grid_size = grid_size
@@ -18,8 +18,7 @@ class Dataset:
 
     self.max_crop = max_crop
     self.saturation = saturation
-    self.brightness = brightness
-    self.contrast = contrast
+    self.exposure = exposure
     self.noise_dev = noise_dev
     self.hue = hue
 
@@ -133,24 +132,44 @@ class Dataset:
         tf.cast(crop_size, dtype=tf.float32)
 
     #
-    # Color/brightness manipulation
-    #
-    if training:
-      image = tf.image.random_hue(image, self.hue)
-      image = tf.image.random_saturation(image, 1.0 - self.saturation,
-          1.0 + self.saturation)
-      image = tf.image.random_brightness(image, self.brightness)
-      image = tf.image.random_contrast(image, 1.0 - self.contrast, \
-          1.0 + self.contrast)
-      rot_count = tf.random_uniform([], 0, 4, dtype=tf.int32)
-      image = tf.image.rot90(image, rot_count)
-      polygons = self.rot90_polygons(polygons, rot_count)
-
-    #
     # Change image's type and value range
     #
     image = tf.cast(image, dtype=tf.float32)
     image /= 255.0
+
+    #
+    # Color/exposure manipulation, rotation
+    #
+    if training:
+      image = tf.image.rgb_to_hsv(image)
+
+      # Color
+      h, s, v = tf.split(image, [ 1, 1, 1 ], axis=-1)
+
+      saturation_coeff = tf.random_uniform([], 1.0 - self.saturation,
+          1.0 + self.saturation)
+      exposure_coeff = tf.random_uniform([], 1.0 - self.exposure,
+          1.0 + self.exposure)
+
+      s *= saturation_coeff
+      s = tf.clip_by_value(s, 0.0, 1.0)
+
+      v *= exposure_coeff
+      s = tf.clip_by_value(s, 0.0, 1.0)
+
+      image = tf.concat([ h, s, v ], axis=-1)
+
+      # TODO(indutny): change hue above too
+      image = tf.image.random_hue(image, self.hue)
+
+      # Exposure
+
+      image = tf.image.hsv_to_rgb(image)
+
+      # Rotation
+      rot_count = tf.random_uniform([], 0, 4, dtype=tf.int32)
+      image = tf.image.rot90(image, rot_count)
+      polygons = self.rot90_polygons(polygons, rot_count)
 
     #
     # Add gaussian noise
@@ -158,6 +177,14 @@ class Dataset:
     if training:
       image += tf.random_normal(shape=tf.shape(image), stddev=self.noise_dev)
       image = tf.clip_by_value(image, 0.0, 1.0)
+
+    #
+    # Normalize image
+    #
+    min_val = tf.reduce_min(image)
+    max_val = tf.reduce_max(image)
+    image -= min_val
+    image /= (max_val - min_val + 1e-23)
 
     return image, self.polygons_to_grid(polygons)
 
