@@ -19,7 +19,7 @@ GRID_CHANNELS = 7
 # We're using the previous ones
 
 PRIOR_SIZE = [ 0.15653530649021333, 0.0697987945243159 ]
-PRIOR_ANGLES = [ 0.0, 0.2, 0.4, 0.6, 0.8 ]
+PRIOR_ANGLES = [ 0.0, 0.5 ]
 
 class Model:
   def __init__(self, config, prior_size=PRIOR_SIZE, prior_angles=PRIOR_ANGLES):
