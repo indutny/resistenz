@@ -117,6 +117,14 @@ class Model:
 
       expected_confidence = active_anchors
 
+      # Count objects for metrics below
+      active_count = sum_over_grid(sum_over_cells(active_anchors),
+          name='active_count')
+
+      active_count = tf.expand_dims(active_count, axis=-1)
+      active_count = tf.expand_dims(active_count, axis=-1)
+      active_count = tf.expand_dims(active_count, axis=-1)
+
       # Confidence loss
       confidence_loss = \
           (prediction['confidence'] - expected_confidence) ** 2 / 2.0
@@ -162,7 +170,8 @@ class Model:
       regularization_loss = weight_loss
 
       # Some metrics
-      mean_iou = sum_over_grid(sum_over_cells(iou * active_anchors))
+      mean_anchors = active_anchors / (active_count + 1e-23)
+      mean_iou = sum_over_grid(sum_over_cells(iou * mean_anchors))
       mean_iou = tf.reduce_mean(mean_iou)
 
       center_loss = self.lambda_coord * center_loss * active_anchors
