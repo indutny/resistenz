@@ -117,14 +117,6 @@ class Model:
 
       expected_confidence = active_anchors
 
-      # Count objects for metrics below
-      active_count = sum_over_grid(sum_over_cells(active_anchors),
-          name='active_count')
-
-      active_count = tf.expand_dims(active_count, axis=-1)
-      active_count = tf.expand_dims(active_count, axis=-1)
-      active_count = tf.expand_dims(active_count, axis=-1)
-
       # Confidence loss
       confidence_loss = \
           (prediction['confidence'] - expected_confidence) ** 2 / 2.0
@@ -133,7 +125,7 @@ class Model:
           self.lambda_obj * active_anchors * confidence_loss, name='obj_loss')
       no_obj_loss = sum_over_cells( \
           self.lambda_no_obj * inactive_anchors * confidence_loss,
-          name='no_obj_loss', max=True)
+          name='no_obj_loss')
 
       # Coordinate loss
       center_loss = tf.reduce_mean(
@@ -150,7 +142,7 @@ class Model:
 
       # To batch losses
       obj_loss = sum_over_grid(obj_loss)
-      no_obj_loss = sum_over_grid(no_obj_loss, max=True)
+      no_obj_loss = sum_over_grid(no_obj_loss)
       coord_loss = sum_over_grid(coord_loss)
 
       # To scalars
@@ -168,6 +160,14 @@ class Model:
       # Total
       total_loss = obj_loss + no_obj_loss + coord_loss
       regularization_loss = weight_loss
+
+      # Count objects for metrics below
+      active_count = sum_over_grid(sum_over_cells(active_anchors),
+          name='active_count')
+
+      active_count = tf.expand_dims(active_count, axis=-1)
+      active_count = tf.expand_dims(active_count, axis=-1)
+      active_count = tf.expand_dims(active_count, axis=-1)
 
       # Some metrics
       mean_anchors = active_anchors / (active_count + 1e-23)
