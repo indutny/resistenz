@@ -17,7 +17,7 @@ def parse_args(kind='train'):
 
   parser.add_argument('--lambda_angle', type=float, default=0.1)
   parser.add_argument('--lambda_obj', type=float, default=1.0)
-  parser.add_argument('--lambda_no_obj', type=float, default=2.5)
+  parser.add_argument('--lambda_no_obj', type=float, default=1.0)
   parser.add_argument('--lambda_coord', type=float, default=5.0)
 
   parser.add_argument('--lr', type=float, default=0.001)
@@ -45,7 +45,7 @@ def parse_args(kind='train'):
     tag += '_la{}'.format(args.lambda_angle)
   if args.lambda_obj != 1.0:
     tag += '_lo{}'.format(args.lambda_obj)
-  if args.lambda_no_obj != 2.5:
+  if args.lambda_no_obj != 1.0:
     tag += '_lno{}'.format(args.lambda_no_obj)
   if args.lambda_coord != 5.0:
     tag += '_lc{}'.format(args.lambda_coord)

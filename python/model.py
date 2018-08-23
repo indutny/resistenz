@@ -78,11 +78,17 @@ class Model:
 
   def loss_and_metrics(self, prediction, labels, tag='train'):
     # Just a helpers
-    def sum_over_cells(x, name=None):
-      return tf.reduce_sum(x, axis=3, name=name)
+    def sum_over_cells(x, name=None, max=False):
+      if max:
+        return tf.reduce_max(x, axis=3, name=name)
+      else:
+        return tf.reduce_sum(x, axis=3, name=name)
 
-    def sum_over_grid(x, name=None):
-      return tf.reduce_sum(tf.reduce_sum(x, axis=2), axis=1, name=name)
+    def sum_over_grid(x, name=None, max=False):
+      if max:
+        return tf.reduce_max(tf.reduce_max(x, axis=2), axis=1, name=name)
+      else:
+        return tf.reduce_sum(tf.reduce_sum(x, axis=2), axis=1, name=name)
 
     with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
         values=[ prediction, labels ]):
@@ -111,19 +117,6 @@ class Model:
 
       expected_confidence = active_anchors
 
-      # Normalize masks
-      active_count = sum_over_grid(sum_over_cells(active_anchors),
-          name='active_count')
-
-      active_count = tf.expand_dims(active_count, axis=-1)
-      active_count = tf.expand_dims(active_count, axis=-1)
-      active_count = tf.expand_dims(active_count, axis=-1)
-
-      inactive_count = GRID_SIZE * GRID_SIZE * self.grid_depth - active_count
-
-      active_anchors /= active_count + 1e-23
-      inactive_anchors /= inactive_count + 1e-23
-
       # Confidence loss
       confidence_loss = \
           (prediction['confidence'] - expected_confidence) ** 2 / 2.0
@@ -132,7 +125,7 @@ class Model:
           self.lambda_obj * active_anchors * confidence_loss, name='obj_loss')
       no_obj_loss = sum_over_cells( \
           self.lambda_no_obj * inactive_anchors * confidence_loss,
-          name='no_obj_loss')
+          name='no_obj_loss', max=True)
 
       # Coordinate loss
       center_loss = tf.reduce_mean(
@@ -149,7 +142,7 @@ class Model:
 
       # To batch losses
       obj_loss = sum_over_grid(obj_loss)
-      no_obj_loss = sum_over_grid(no_obj_loss)
+      no_obj_loss = sum_over_grid(no_obj_loss, max=True)
       coord_loss = sum_over_grid(coord_loss)
 
       # To scalars
