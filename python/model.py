@@ -167,7 +167,8 @@ class Model:
       weight_loss *= self.weight_decay
 
       # Total
-      total_loss = obj_loss + no_obj_loss + coord_loss + weight_loss
+      total_loss = obj_loss + no_obj_loss + coord_loss
+      regularization_loss = weight_loss
 
       # Some metrics
       mean_iou = sum_over_grid(sum_over_cells(iou * active_anchors))
@@ -198,7 +199,7 @@ class Model:
       tf.summary.scalar('{}/weight_loss'.format(tag), weight_loss),
     ]
 
-    return total_loss, tf.summary.merge(metrics)
+    return total_loss + regularization_loss, tf.summary.merge(metrics)
 
   # Helpers
 
