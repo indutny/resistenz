@@ -10,7 +10,8 @@ DIR = os.path.join('.', 'dataset', 'processed')
 
 class Dataset:
   def __init__(self, image_size, grid_size, validation_split=0.15, max_crop=0.1,
-               saturation=0.5, brightness=0.2, contrast=0.2, noise_dev=0.03):
+               saturation=0.5, brightness=0.2, contrast=0.2, noise_dev=0.03,
+               hue=0.05):
     self.image_size = image_size
     self.grid_size = grid_size
     self.validation_split = validation_split
@@ -20,6 +21,7 @@ class Dataset:
     self.brightness = brightness
     self.contrast = contrast
     self.noise_dev = noise_dev
+    self.hue = hue
 
     self.images = [
         os.path.join(DIR, f)
@@ -134,6 +136,7 @@ class Dataset:
     # Color/brightness manipulation
     #
     if training:
+      image = tf.image.random_hue(image, self.hue)
       image = tf.image.random_saturation(image, 1.0 - self.saturation,
           1.0 + self.saturation)
       image = tf.image.random_brightness(image, self.brightness)

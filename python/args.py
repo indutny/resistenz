@@ -1,7 +1,11 @@
 import argparse
 
-def parse_args():
+def parse_args(kind='train'):
   parser = argparse.ArgumentParser(description='Train resistenz network.')
+
+  if kind == 'test':
+    parser.add_argument('save', type=str)
+    parser.add_argument('image', type=str)
 
   # TODO(indutny): add image_size
   parser.add_argument('--name', type=str, default='default')

@@ -4,7 +4,7 @@ import tensorflow as tf
 from utils import create_cell_starts
 
 class SVG:
-  def __init__(self, raw, grid, truth):
+  def __init__(self, raw, grid, truth=None):
     self.raw = raw
     self.grid = grid
     self.truth = truth
@@ -40,8 +40,9 @@ class SVG:
       cell_starts = tf.concat([ cell_starts, rest ], axis=-1)
 
       svg += self.process_grid(self.grid, cell_starts, width, height)
-      svg += self.process_grid(self.truth, cell_starts, width, height,
-          is_truth=True)
+      if not self.truth is None:
+        svg += self.process_grid(self.truth, cell_starts, width, height,
+            is_truth=True)
 
       svg += '</svg>\n'
 
