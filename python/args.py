@@ -11,7 +11,7 @@ def parse_args(kind='train'):
   parser.add_argument('--name', type=str, default='default')
   parser.add_argument('--epochs', type=int, default=100000)
   parser.add_argument('--batch_size', type=int, default=64)
-  parser.add_argument('--weight_decay', type=float, default=5e-4)
+  parser.add_argument('--weight_decay', type=float, default=1e-4)
   parser.add_argument('--iou_threshold', type=float, default=0.5)
   parser.add_argument('--grid_depth', type=int, default=5)
 
