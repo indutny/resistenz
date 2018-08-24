@@ -13,7 +13,7 @@ def parse_args(kind='train'):
   parser.add_argument('--batch_size', type=int, default=64)
   parser.add_argument('--weight_decay', type=float, default=1e-4)
   parser.add_argument('--iou_threshold', type=float, default=0.5)
-  parser.add_argument('--grid_depth', type=int, default=2)
+  parser.add_argument('--grid_depth', type=int, default=5)
 
   parser.add_argument('--lambda_angle', type=float, default=0.1)
   parser.add_argument('--lambda_obj', type=float, default=1.0)
@@ -38,7 +38,7 @@ def parse_args(kind='train'):
     tag += '_wd{}'.format(args.weight_decay)
   if args.iou_threshold != 0.5:
     tag += '_iou{}'.format(args.iou_threshold)
-  if args.grid_depth != 2:
+  if args.grid_depth != 5:
     tag += '_gd{}'.format(args.grid_depth)
 
   if args.lambda_angle != 0.1:

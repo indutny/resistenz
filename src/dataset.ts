@@ -9,7 +9,7 @@ import { Polygon, IPoint, IOrientedRect } from './utils';
 import { Input, TARGET_WIDTH, TARGET_HEIGHT } from './input';
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
-const IMAGE_DIR = path.join(DATASET_DIR, 'processed');
+export const IMAGE_DIR = path.join(DATASET_DIR, 'processed');
 
 export interface IDataset {
   readonly train: ReadonlyArray<Input>;

@@ -7,27 +7,18 @@ IMAGE_SIZE = 416
 GRID_SIZE = 13
 GRID_CHANNELS = 7
 
-#
-# Last computed priors:
-
-# [ [ 0.4203329600221457, 0.15038458315749056 ],
-#   [ 0.28172578032055906, 0.11638234408829319 ],
-#   [ 0.2833327856632452, 0.10136935933972972 ],
-#   [ 0.4179489178405124, 0.17265681086089144 ],
-#   [ 0.28889946330244515, 0.11048115994080869 ] ]
-#
-# We're using the previous ones
-
-PRIOR_SIZE = [ 0.15653530649021333, 0.0697987945243159 ]
-PRIOR_ANGLES = [ 0.0, 0.5 ]
+PRIOR_SIZES = [
+  [ 0.14377480392797287, 0.059023397839700086 ],
+  [ 0.20904473801128326, 0.08287369797830041 ],
+  [ 0.2795802996888472, 0.11140121237843759 ],
+  [ 0.3760081365223815, 0.1493933380505552 ],
+  [ 0.5984967942142249, 0.2427157057261726 ],
+]
 
 class Model:
-  def __init__(self, config, prior_size=PRIOR_SIZE, prior_angles=PRIOR_ANGLES):
-    self.prior_size = tf.constant(prior_size, dtype=tf.float32,
-        name='prior_size')
-    self.prior_rotations = tf.constant([
-      gen_rot_matrix(angle) for angle in prior_angles
-    ], name='prior_rotations')
+  def __init__(self, config, prior_sizes=PRIOR_SIZES):
+    self.prior_sizes = tf.constant(prior_sizes, dtype=tf.float32,
+        name='prior_sizes')
     self.iou_threshold = config.iou_threshold
     self.weight_decay = config.weight_decay
     self.grid_depth = config.grid_depth
@@ -235,20 +226,9 @@ class Model:
       confidence = tf.sigmoid(confidence)
 
       # Apply priors
-      with tf.name_scope('apply_prior_size', values=[ size, self.prior_size ]):
-        size *= self.prior_size
-
-      with tf.name_scope('apply_prior_angles',
-          values=[ angle, self.prior_rotations ]):
-        old_shape = tf.shape(angle)
-        angle = tf.reshape(angle,
-            shape=[ batch_size * GRID_SIZE * GRID_SIZE, self.grid_depth, 1, 2 ])
-        prior_rotations = tf.expand_dims(self.prior_rotations, axis=0)
-        prior_rotations = tf.tile(prior_rotations,
-            [ batch_size * GRID_SIZE * GRID_SIZE, 1, 1, 1 ])
-
-        angle = tf.matmul(angle, prior_rotations, transpose_b=True)
-        angle = tf.reshape(angle, shape=old_shape)
+      with tf.name_scope('apply_prior_sizes',
+                         values=[ size, self.prior_sizes ]):
+        size *= self.prior_sizes
 
       return tf.concat([ center, size, angle, confidence ], axis=-1,
           name='output')
