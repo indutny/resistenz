@@ -110,6 +110,11 @@ with tf.Session() as sess:
   saver = tf.train.Saver(max_to_keep=10, name=tag)
 
   sess.graph.finalize()
+
+  if not args.restore is None:
+    print('Restoring from "{}"'.format(args.restore))
+    saver.restore(sess, args.restore)
+
   epoch_value = sess.run(epoch)
   while epoch_value < args.epochs:
     print('Epoch {}'.format(epoch_value))
@@ -146,7 +151,8 @@ with tf.Session() as sess:
         break
     print('Completed {} validation batches'.format(batches))
 
-    if epoch_value % args.save_every == 0:
-      saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(epoch_value)))
-
     epoch_value = sess.run(epoch_inc)
+
+    if epoch_value % args.save_every == 0:
+      print('Saving...')
+      saver.save(sess, os.path.join(SAVE_DIR, '{:08d}'.format(epoch_value)))

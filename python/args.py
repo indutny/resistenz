@@ -3,7 +3,9 @@ import argparse
 def parse_args(kind='train'):
   parser = argparse.ArgumentParser(description='Train resistenz network.')
 
-  if kind == 'test':
+  if kind == 'train':
+    parser.add_argument('--restore', type=str)
+  elif kind == 'test':
     parser.add_argument('save', type=str)
     parser.add_argument('image', type=str)
 
