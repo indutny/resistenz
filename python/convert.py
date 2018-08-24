@@ -15,4 +15,6 @@ with tf.gfile.GFile(args.model, 'rb') as f:
 tf.import_graph_def(graph_def, name='')
 
 tf_converter.convert(tf_model_path=args.model, mlmodel_path=args.out,
+    image_input_names=[ 'image:0' ],
+    image_scale=1.0/255.0,
     output_feature_names=[ 'resistenz/output/output:0' ])
