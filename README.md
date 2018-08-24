@@ -2,6 +2,14 @@
 
 WIP
 
+## How to export to CoreML
+
+```sh
+python3 python/save_graph.py saves/prior_sizes_iou0.7/00000600 saves/prior_sizes_iou0.7/
+freeze_graph --input_graph ./saves/prior_sizes_iou0.7/graph.pbtxt --input_checkpoint=./saves/prior_sizes_iou0.7/graph.ckpt --output_node_names="resistenz/output/output" --output_graph=./pretrained/prior_sizes_iou0.7/freeze.pb
+python3 python/convert.py pretrained/prior_sizes_iou0.7/freeze.pb pretrained/prior_sizes_iou0.7/graph.mlmodel
+```
+
 #### LICENSE
 
 This software is licensed under the MIT License.

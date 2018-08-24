@@ -4,7 +4,7 @@ import numpy as np
 import os
 import json
 
-from utils import create_cell_starts
+from utils import create_cell_starts, normalize_image
 
 DIR = os.path.join('.', 'dataset', 'processed')
 
@@ -178,13 +178,7 @@ class Dataset:
       image += tf.random_normal(shape=tf.shape(image), stddev=self.noise_dev)
       image = tf.clip_by_value(image, 0.0, 1.0)
 
-    #
-    # Normalize image
-    #
-    min_val = tf.reduce_min(image)
-    max_val = tf.reduce_max(image)
-    image -= min_val
-    image /= (max_val - min_val + 1e-23)
+    image = normalize_image(image)
 
     return image, self.polygons_to_grid(polygons)
 

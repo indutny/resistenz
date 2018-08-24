@@ -8,6 +8,9 @@ def parse_args(kind='train'):
   elif kind == 'test':
     parser.add_argument('save', type=str)
     parser.add_argument('image', type=str)
+  elif kind == 'freeze':
+    parser.add_argument('save', type=str)
+    parser.add_argument('out', type=str)
 
   # TODO(indutny): add image_size
   parser.add_argument('--name', type=str, default='default')

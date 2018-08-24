@@ -30,7 +30,7 @@ class Model:
 
     self.trainable_variables = None
 
-  def forward(self, image, training=False):
+  def forward(self, image, training=False, coreml=False):
     with tf.variable_scope('resistenz', reuse=tf.AUTO_REUSE, \
         values=[ image ]) as scope:
       x = image
@@ -61,7 +61,7 @@ class Model:
       x = self.conv_bn(x, filters=self.grid_depth * GRID_CHANNELS, size=1,
           name='last', activation=None, training=training)
 
-      x = self.output(x)
+      x = self.output(x, coreml=coreml)
 
       self.trainable_variables = scope.trainable_variables()
 
@@ -211,13 +211,20 @@ class Model:
     return tf.layers.max_pooling2d(input, pool_size=size, strides=stride,
         padding='SAME')
 
-  def output(self, x):
+  def output(self, x, coreml=False):
     with tf.name_scope('output', values=[ x ]):
       batch_size = tf.shape(x)[0]
 
-      x = tf.reshape(x, [
-        batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth, GRID_CHANNELS,
-      ])
+      if not coreml:
+        x = tf.reshape(x, [
+          batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth, GRID_CHANNELS,
+        ])
+      else:
+        # CoreML does not support rank-5 tensors, strided slices, and so on
+        return tf.reshape(x, [
+          batch_size, GRID_SIZE * GRID_SIZE, self.grid_depth, GRID_CHANNELS,
+        ], name='output')
+
       center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
 
       center = tf.sigmoid(center)

@@ -23,3 +23,10 @@ def gen_rot_matrix(angle):
     [ cos, -sin ],
     [ sin, cos ],
   ]
+
+def normalize_image(image):
+  min_val = tf.reduce_min(image)
+  max_val = tf.reduce_max(image)
+  image -= min_val
+  image /= (max_val - min_val + 1e-23)
+  return image
