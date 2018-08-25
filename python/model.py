@@ -197,9 +197,8 @@ class Model:
 
   # Helpers
 
-  def conv_bn(self, input, filters, size, name, \
-              activation=lambda x: tf.nn.leaky_relu(x, alpha=0.1),
-              training=False):
+  def conv_bn(self, input, filters, size, name, training, \
+              activation=lambda x: tf.nn.leaky_relu(x, alpha=0.1)) :
     x = tf.layers.conv2d(input, filters=filters, kernel_size=size, \
         padding='SAME',
         name='conv_{}'.format(name))
