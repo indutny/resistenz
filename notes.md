@@ -11,3 +11,4 @@
 7. Image normalization, `[ 0, 1 )`
 8. Angle priors, size priors (needs investigation)
 9. Anchor count! Does it make any difference?
+10. IoU threshold interpreation (if it will work out)

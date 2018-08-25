@@ -104,7 +104,7 @@ class Model:
 
       inactive_anchors = 1.0 - active_anchors
 
-      # Disable training for anchors with high threshold
+      # Disable training for anchors with high IoU
       inactive_anchors *= tf.cast(iou < self.iou_threshold, dtype=tf.float32)
 
       expected_confidence = active_anchors
