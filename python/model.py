@@ -102,10 +102,12 @@ class Model:
           name='active_anchors')
       active_anchors *= labels['confidence']
 
-      inactive_anchors = 1.0 - active_anchors
-
       # Disable training for anchors with high IoU
-      inactive_anchors *= tf.cast(iou < self.iou_threshold, dtype=tf.float32)
+      passive_anchors = labels['confidence']
+      passive_anchors *= tf.cast(iou >= self.iou_threshold, dtype=tf.float32)
+
+      inactive_anchors = 1.0 - tf.maximum(active_anchors, passive_anchors)
+      inactive_anchors = tf.identity(inactive_anchors, name='inactive_anchors')
 
       expected_confidence = active_anchors
 
