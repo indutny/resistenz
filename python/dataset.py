@@ -159,7 +159,7 @@ class Dataset:
       s = tf.clip_by_value(s, 0.0, 1.0)
 
       v *= exposure_coeff
-      s = tf.clip_by_value(s, 0.0, 1.0)
+      v = tf.clip_by_value(v, 0.0, 1.0)
 
       image = tf.concat([ h, s, v ], axis=-1)
 
