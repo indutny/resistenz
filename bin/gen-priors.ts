@@ -46,8 +46,6 @@ async function generate() {
   const points = rects.reduce((acc, curr) => acc.concat(curr));
   const clusterize = promisify(kmeans.clusterize);
 
-  // TODO(indutny): apparently this is very wrong, we should clusterize by
-  // IoU!!!
   const res = await clusterize.call(kmeans, points, {
     k: GRID_DEPTH,
     distance: (a: [ number, number ], b: [ number, number ]) => {
