@@ -95,16 +95,17 @@ class Model:
       abs_cos_diff = tf.abs(1.0 - angle_diff, name='abs_cos_diff')
 
       iou *= abs_cos_diff
-      max_iou = tf.one_hot(tf.argmax(iou, axis=-1), depth=self.grid_depth,
-          axis=-1, on_value=True, off_value=False, dtype=tf.bool)
 
       # Compute masks
-      active_anchors = tf.logical_or(iou >= self.iou_threshold, max_iou)
-      active_anchors = tf.cast(active_anchors, dtype=tf.float32,
+      active_anchors = tf.one_hot(tf.argmax(iou, axis=-1), depth=self.grid_depth,
+          axis=-1, on_value=1.0, off_value=0.0, dtype=tf.float32,
           name='active_anchors')
       active_anchors *= labels['confidence']
 
       inactive_anchors = 1.0 - active_anchors
+
+      # Disable training for anchors with high threshold
+      inactive_anchors *= tf.cast(iou < self.iou_threshold, dtype=tf.float32)
 
       expected_confidence = active_anchors
 
