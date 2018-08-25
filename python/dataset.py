@@ -11,7 +11,7 @@ DIR = os.path.join('.', 'dataset', 'processed')
 class Dataset:
   def __init__(self, image_size, grid_size, validation_split=0.15, max_crop=0.1,
                saturation=0.5, exposure=0.2, noise_dev=0.03,
-               hue=0.05):
+               hue=0.1):
     self.image_size = image_size
     self.grid_size = grid_size
     self.validation_split = validation_split
