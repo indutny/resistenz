@@ -23,8 +23,8 @@ with tf.Session() as sess:
   training, validation = dataset.load()
 
   # Real datasets and their iterators
-  training = training.batch(args.batch_size)
-  validation = validation.batch(args.batch_size)
+  training = training.batch(args.batch_size).prefetch(4 * args.batch_size)
+  validation = validation.batch(args.batch_size).cache()
 
   training_iter = training.make_initializable_iterator()
   validation_iter = validation.make_initializable_iterator()
