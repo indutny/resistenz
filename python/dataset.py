@@ -95,12 +95,16 @@ class Dataset:
         (tf.constant(images, dtype=tf.string), \
          tf.constant(polygons, dtype=tf.float32),))
 
+    dataset = dataset.map(lambda img, polys: (self.load_image(img), polys,))
+    dataset.cache()
     return dataset.shuffle(buffer_size=10000)
 
-  def process_image(self, image, polygons, training):
+  def load_image(self, image):
     image = tf.read_file(image)
     image = tf.image.decode_jpeg(image, channels=3)
+    return image
 
+  def process_image(self, image, polygons, training):
     #
     # Do a major crop to fit image into a square
     #
