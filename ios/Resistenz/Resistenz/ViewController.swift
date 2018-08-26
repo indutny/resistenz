@@ -10,7 +10,9 @@ import UIKit
 import AVKit
 import CoreML
 import Vision
+import SpriteKit
 
+let kConfidenceThreshold: Float = 0.5
 let kGridChannels = 7
 let kPriorSizes: Array<(Float, Float)> = [
     ( 0.14377480392797287, 0.059023397839700086 ),
@@ -18,26 +20,16 @@ let kPriorSizes: Array<(Float, Float)> = [
     ( 0.2795802996888472, 0.11140121237843759 ),
     ( 0.3760081365223815, 0.1493933380505552 ),
     ( 0.5984967942142249, 0.2427157057261726 ),
-];
+]
 
 func sigmoid(_ x: Float) -> Float {
     return 1.0 / (1.0 + exp(-x))
 }
 
 class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
+    @IBOutlet weak var spriteView: SKView!
+    
     private var session: AVCaptureSession!
-
-    private lazy var request: VNCoreMLRequest = {
-        let model: VNCoreMLModel = try! VNCoreMLModel(for: ResistenzGraph().model)
-        
-        let request = VNCoreMLRequest(model: model) { [weak self] (request, error) in
-            self?.processRects(for: request, error: error)
-        }
-        request.imageCropAndScaleOption = .centerCrop
-        request.usesCPUOnly = true
-        
-        return request
-    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -59,6 +51,13 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.frame = view.frame
         view.layer.addSublayer(preview)
+        preview.zPosition = -1.0
+        
+        let scene = SKScene(size: CGSize(width: view.frame.width, height: view.frame.height))
+        scene.backgroundColor = .clear
+        
+        self.spriteView.presentScene(scene)
+        self.spriteView.frame = view.frame
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -96,6 +95,18 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     }
     
     // MARK: Vision stuff
+    private lazy var request: VNCoreMLRequest = {
+        let model: VNCoreMLModel = try! VNCoreMLModel(for: ResistenzGraph().model)
+        
+        let request = VNCoreMLRequest(model: model) { [weak self] (request, error) in
+            self?.processRects(for: request, error: error)
+        }
+        request.imageCropAndScaleOption = .centerCrop
+        request.usesCPUOnly = true
+        
+        return request
+    }()
+    
     func processRects(for request: VNRequest, error: Error?) {
         if let error = error {
             print(error.localizedDescription)
@@ -118,13 +129,14 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             return arrayValue[x + y * gridWidth + i * gridWidth * gridHeight].floatValue
         }
         
+        var rects: [OrientedRect] = []
         for y in 0..<gridHeight {
             for x in 0..<gridWidth {
                 for depth in 0..<gridDepth {
                     let i = depth * kGridChannels
                     
                     let confidence = sigmoid(getCellValue(x, y, i + 6))
-                    if confidence < 0.5 {
+                    if confidence < kConfidenceThreshold {
                         continue
                     }
                     
@@ -137,12 +149,36 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                     let cos = getCellValue(x, y, i + 4)
                     let sin = getCellValue(x, y, i + 5)
                     let angle = atan2(sin, cos)
-                    print("Got box with confidence \(confidence) and cx=\(cx) cy=\(cy) width=\(width) height=\(height)")
+                    
+                    let rect = OrientedRect(cx: cx,
+                                            cy: cy,
+                                            width: width,
+                                            height: height,
+                                            angle: angle,
+                                            confidence: confidence)
+                    rects.append(rect)
                 }
             }
         }
-        
+
         DispatchQueue.main.async { [weak self] in
+            self?.displayRects(rects)
+        }
+    }
+    
+    func displayRects(_ rects: [OrientedRect]) {
+        guard let scene = self.spriteView.scene else {
+            return
+        }
+        let scale = min(scene.size.width, scene.size.height)
+        let center = CGPoint(x: scene.size.width / 2, y: scene.size.height / 2)
+        scene.removeAllChildren()
+        for rect in rects {
+            let node = SKShapeNode(path: rect.toPath(scale: scale))
+            node.position = center
+            node.strokeColor = .green
+            node.lineWidth = 1
+            scene.addChild(node)
         }
     }
 }

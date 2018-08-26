@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4D25EE8B2132FE1E00D7BAE0 /* ResistenzGraph.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4D25EE8A2132FE1E00D7BAE0 /* ResistenzGraph.mlmodel */; };
+		4D25EE912133177600D7BAE0 /* OrientedRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D25EE902133177600D7BAE0 /* OrientedRect.swift */; };
 		4D7910542132F7EA0063D46F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7910532132F7EA0063D46F /* AppDelegate.swift */; };
 		4D7910562132F7EA0063D46F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7910552132F7EA0063D46F /* ViewController.swift */; };
 		4D7910592132F7EA0063D46F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4D7910572132F7EA0063D46F /* Main.storyboard */; };
@@ -17,6 +18,7 @@
 
 /* Begin PBXFileReference section */
 		4D25EE8A2132FE1E00D7BAE0 /* ResistenzGraph.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = ResistenzGraph.mlmodel; path = ../../../pretrained/sane_images/ResistenzGraph.mlmodel; sourceTree = "<group>"; };
+		4D25EE902133177600D7BAE0 /* OrientedRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrientedRect.swift; sourceTree = "<group>"; };
 		4D7910502132F7EA0063D46F /* Resistenz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Resistenz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D7910532132F7EA0063D46F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4D7910552132F7EA0063D46F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -63,6 +65,7 @@
 				4D79105A2132F7EC0063D46F /* Assets.xcassets */,
 				4D79105C2132F7EC0063D46F /* LaunchScreen.storyboard */,
 				4D79105F2132F7EC0063D46F /* Info.plist */,
+				4D25EE902133177600D7BAE0 /* OrientedRect.swift */,
 			);
 			path = Resistenz;
 			sourceTree = "<group>";
@@ -139,6 +142,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D7910562132F7EA0063D46F /* ViewController.swift in Sources */,
+				4D25EE912133177600D7BAE0 /* OrientedRect.swift in Sources */,
 				4D25EE8B2132FE1E00D7BAE0 /* ResistenzGraph.mlmodel in Sources */,
 				4D7910542132F7EA0063D46F /* AppDelegate.swift in Sources */,
 			);
