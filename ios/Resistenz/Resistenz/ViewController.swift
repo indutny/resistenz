@@ -83,8 +83,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             print("No buffer")
             return
         }
-        let handler = VNImageRequestHandler(cvPixelBuffer: imageBuf, options: [:])
-        
+        let handler = VNImageRequestHandler(cvPixelBuffer: imageBuf, orientation: .left, options: [:])
         do {
             try handler.perform([ self.request ])
         } catch {
@@ -171,11 +170,13 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             return
         }
         let scale = min(scene.size.width, scene.size.height)
-        let center = CGPoint(x: scene.size.width / 2, y: scene.size.height / 2)
         scene.removeAllChildren()
         for rect in rects {
             let node = SKShapeNode(path: rect.toPath(scale: scale))
-            node.position = center
+            let position = CGPoint(
+                x: rect.center.x * scale,
+                y: (scene.size.height / 2) + scale / 2 - rect.center.y * scale)
+            node.position = position
             node.strokeColor = .green
             node.lineWidth = 1
             scene.addChild(node)
