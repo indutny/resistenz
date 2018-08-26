@@ -224,7 +224,7 @@ class Model:
       else:
         # CoreML does not support rank-5 tensors, strided slices, and so on
         return tf.reshape(x, [
-          batch_size, GRID_SIZE * GRID_SIZE, self.grid_depth, GRID_CHANNELS,
+          batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth * GRID_CHANNELS,
         ], name='output')
 
       center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
