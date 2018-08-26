@@ -163,12 +163,12 @@ class Dataset:
 
       image = tf.concat([ h, s, v ], axis=-1)
 
-      # TODO(indutny): change hue above too
-      image = tf.image.random_hue(image, self.hue)
-
       # Exposure
 
       image = tf.image.hsv_to_rgb(image)
+
+      # TODO(indutny): change hue above too
+      image = tf.image.random_hue(image, self.hue)
 
       # Rotation
       rot_count = tf.random_uniform([], 0, 4, dtype=tf.int32)
