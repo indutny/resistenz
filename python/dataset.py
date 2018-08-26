@@ -150,21 +150,19 @@ class Dataset:
       # Color
       h, s, v = tf.split(image, [ 1, 1, 1 ], axis=-1)
 
+      # Saturation
       saturation_coeff = tf.random_uniform([], 1.0 - self.saturation,
           1.0 + self.saturation)
-      exposure_coeff = tf.random_uniform([], 1.0 - self.exposure,
-          1.0 + self.exposure)
-
       s *= saturation_coeff
       s = tf.clip_by_value(s, 0.0, 1.0)
 
+      # Exposure
+      exposure_coeff = tf.random_uniform([], 1.0 - self.exposure,
+          1.0 + self.exposure)
       v *= exposure_coeff
       v = tf.clip_by_value(v, 0.0, 1.0)
 
       image = tf.concat([ h, s, v ], axis=-1)
-
-      # Exposure
-
       image = tf.image.hsv_to_rgb(image)
 
       # TODO(indutny): change hue above too
