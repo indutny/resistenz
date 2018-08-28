@@ -105,17 +105,18 @@ class Dataset:
     return image
 
   def process_image(self, image, polygons, training):
-    #
-    # Do a major crop to fit image into a square
-    #
-    image, polygons = self.major_crop(image, polygons, training)
-
     if training:
       #
       # Do a rotation on full-size image
       #
       image, polygons = self.random_rotate(image, polygons)
 
+    #
+    # Do a major crop to fit image into a square
+    #
+    image, polygons = self.major_crop(image, polygons, training)
+
+    if training:
       #
       # Do a minor crop
       #
@@ -171,7 +172,7 @@ class Dataset:
       # Rotation
       rot_count = tf.random_uniform([], 0, 4, dtype=tf.int32)
       image = tf.image.rot90(image, rot_count)
-      polygons = self.rot90_polygons(polygons, rot_count)
+      polygons = self.rot90_polygons(image, polygons, rot_count)
 
     #
     # Add gaussian noise
@@ -185,7 +186,9 @@ class Dataset:
     return image, self.polygons_to_grid(polygons)
 
   def random_rotate(self, image, polygons):
-    # TODO(indutny): implement me
+    angle = tf.random_uniform([], 0.0, math.pi / 2.0)
+    image = tf.contrib.image.rotate(image, angle)
+    polygons = self.rotate_polygons(image, polygons, angle)
     return image, polygons
 
   def major_crop(self, image, polygons, training):
@@ -245,13 +248,14 @@ class Dataset:
 
     return tf.where(polygon_mask, polygons, -tf.ones_like(polygons))
 
-  def rot90_polygons(self, polygons, rot_count):
+  def rot90_polygons(self, image, polygons, rot_count):
     angle = (math.pi / 2.0) * tf.cast(rot_count, dtype=tf.float32)
+    return self.rotate_polygons(image, polygons, angle)
 
+  def rotate_polygons(self, image, polygons, angle):
     cos = tf.cos(angle)
     sin = tf.sin(angle)
 
-    center = tf.constant([ self.image_size / 2.0 ], dtype=tf.float32)
     matrix = tf.reshape(tf.stack([ cos, -sin, sin, cos ]), shape=[ 2, 2 ])
 
     # Flatten
@@ -259,6 +263,8 @@ class Dataset:
     polygons = tf.reshape(polygons, [ old_shape[0] * old_shape[1], 2 ])
 
     # Rotate
+    center = tf.cast(tf.gather(tf.shape(image)[:2], [ 1, 0 ]),
+        dtype=tf.float32) / 2.0
     polygons = tf.matmul(polygons - center, matrix) + center
 
     # Restore shape
