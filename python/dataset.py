@@ -116,7 +116,6 @@ class Dataset:
       #
       image, polygons = self.random_rotate(image, polygons)
 
-    if training:
       #
       # Do a minor crop
       #
