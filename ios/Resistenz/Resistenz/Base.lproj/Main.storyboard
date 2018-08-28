@@ -18,12 +18,17 @@
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <skView contentMode="scaleToFill" fixedFrame="YES" allowsTransparency="YES" translatesAutoresizingMaskIntoConstraints="NO" id="vB0-8k-MAQ">
+                            <skView contentMode="scaleToFill" allowsTransparency="YES" translatesAutoresizingMaskIntoConstraints="NO" id="vB0-8k-MAQ">
                                 <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             </skView>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="vB0-8k-MAQ" firstAttribute="trailing" secondItem="6Tk-OE-BBY" secondAttribute="trailing" id="YEC-Tq-33u"/>
+                            <constraint firstItem="vB0-8k-MAQ" firstAttribute="bottom" secondItem="6Tk-OE-BBY" secondAttribute="bottom" id="g4a-h0-Ldl"/>
+                            <constraint firstItem="vB0-8k-MAQ" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" id="wZh-Eq-DwD"/>
+                            <constraint firstItem="vB0-8k-MAQ" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" id="zaY-og-ubK"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                     </view>
                     <connections>
