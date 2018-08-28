@@ -105,16 +105,16 @@ class Dataset:
     return image
 
   def process_image(self, image, polygons, training):
+    #
+    # Do a major crop to fit image into a square
+    #
+    image, polygons = self.major_crop(image, polygons, training)
+
     if training:
       #
       # Do a rotation on full-size image
       #
       image, polygons = self.random_rotate(image, polygons)
-
-    #
-    # Do a major crop to fit image into a square
-    #
-    image, polygons = self.major_crop(image, polygons, training)
 
     if training:
       #
