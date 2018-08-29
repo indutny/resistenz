@@ -31,6 +31,7 @@ class ViewController: UIViewController,
   @IBOutlet weak var spriteView: SKView!
 
   private var session: AVCaptureSession!
+  private var activeRects: [SKNode] = []
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -104,7 +105,8 @@ class ViewController: UIViewController,
 
   // MARK: Vision stuff
   private lazy var request: VNCoreMLRequest = {
-    let model: VNCoreMLModel = try! VNCoreMLModel(for: ResistenzGraph().model)
+    let model: VNCoreMLModel = try! VNCoreMLModel(
+        for: ResistenzGraphFP16().model)
 
     let request = VNCoreMLRequest(model: model) {
       [weak self] (request, error) in
@@ -182,7 +184,10 @@ class ViewController: UIViewController,
       return
     }
     let scale = min(scene.size.width, scene.size.height)
-    scene.removeAllChildren()
+    for node in activeRects {
+      node.removeFromParent()
+    }
+    activeRects = []
     for rect in rects {
       let node = SKShapeNode(path: rect.toPath(scale: scale))
       let position = CGPoint(
@@ -190,8 +195,11 @@ class ViewController: UIViewController,
         y: (scene.size.height / 2) + scale / 2 - rect.center.y * scale)
       node.position = position
       node.strokeColor = .green
-      node.lineWidth = 1
+      node.fillColor = UIColor(red: 0.0, green: 1.0, blue: 0.0,
+                               alpha: rect.confidence - CGFloat(kConfidenceThreshold))
+      node.lineWidth = rect.confidence
       scene.addChild(node)
+      activeRects.append(node)
     }
   }
 }
