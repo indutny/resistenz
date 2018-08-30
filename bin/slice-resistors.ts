@@ -5,69 +5,83 @@ import * as path from 'path';
 import { promisify } from 'util';
 import jimp = require('jimp');
 
-import { IPoint, IRect, Polygon, polygonCenter } from '../src/utils';
-
-const TARGET_WIDTH = 416;
-const TARGET_HEIGHT = TARGET_WIDTH;
+import { IPoint, Polygon, IOrientedRect, polygonToRect } from '../src/utils';
 
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const LABELS_FILE = path.join(DATASET_DIR, 'labels.json');
 const RAW_DIR = path.join(DATASET_DIR, 'raw');
-const PROCESSED_DIR = path.join(DATASET_DIR, 'processed');
+const RESISTORS_DIR = path.join(DATASET_DIR, 'resistors');
+
+const BATCH_SIZE = 32;
+
+async function sliceRect(image: jimp, rect: IOrientedRect, id: string,
+                         subId: number) {
+  const radius = Math.max(rect.width, rect.height) / 2;
+
+  image = image.crop(rect.cx - radius, rect.cy - radius, 2 * radius,
+    2 * radius);
+  image = image.rotate(rect.angle * 180 / Math.PI, false);
+
+  image = image.crop(radius - rect.width / 2, radius - rect.height / 2,
+                     rect.width, rect.height);
+
+  await image.writeAsync(path.join(RESISTORS_DIR, id + '_' + subId + '.jpg'));
+}
+
+async function runSingle(label: any) {
+  const id = label['External ID'];
+  const regions = label['Label']['Resistor'];
+  const geometry = (regions || []).map((elem: any) => elem.geometry);
+
+  const imageFile = path.join(RAW_DIR, id + '.jpg');
+  if (!await promisify(fs.exists)(imageFile)) {
+    return;
+  }
+
+  let image: jimp;
+  try {
+    image = await jimp.read(imageFile);
+  } catch (e) {
+    return;
+  }
+
+  const height = image.bitmap.height;
+
+  // labelbox.com quirks
+  function translate(point: IPoint): IPoint {
+    return { x: point.x, y: height - point.y };
+  }
+
+  const rects: ReadonlyArray<IOrientedRect> = geometry.map((poly: Polygon) => {
+    return polygonToRect(poly.map((point: IPoint) => {
+      return translate(point);
+    }));
+  });
+
+  // Slice up
+  await Promise.all(rects.map(async (rect, index) => {
+    try {
+      await sliceRect(image.clone(), rect, id, index);
+    } catch (e) {
+      // ignore
+    }
+  }));
+}
+
+async function runBatch(labels: ReadonlyArray<any>) {
+  return await Promise.all(labels.map(async (label: any) => {
+    return await runSingle(label);
+  }));
+}
 
 async function run() {
-  let done = 0;
-  await Promise.all(labels.map(async (data: any) => {
-    if (!data || !data['Label']['Suggested Frame']) {
-      return;
-    }
+  const rawLabels = await promisify(fs.readFile)(LABELS_FILE);
+  const labels = JSON.parse(rawLabels.toString());
 
-    const id: string = data['External ID'];
-    const imageFile = path.join(RAW_DIR, id + '.jpg');
-
-    const exists = await promisify(fs.exists)(imageFile);
-    if (!exists) {
-      return;
-    }
-
-    const rawImage = await jimp.read(imageFile);
-
-    const height = rawImage.bitmap.height;
-
-    // labelbox.com quirks
-    function translate(point: IPoint): IPoint {
-      return { x: point.x, y: height - point.y };
-    }
-
-    const frames: IRect[] = [];
-    for (let { geometry } of data['Label']['Suggested Frame']) {
-      geometry = geometry.map(translate);
-
-      frames.push({
-        x: geometry[0].x,
-        y: geometry[0].y,
-        width: geometry[2].x - geometry[0].x,
-        height: geometry[2].y - geometry[0].y,
-      });
-    }
-
-    const polygons: Polygon[] = [];
-    for (let { geometry } of (data['Label']['Resistor'] || [])) {
-      geometry = geometry.map(translate);
-
-      polygons.push(geometry);
-    }
-
-    const image = new Image(id, rawImage, polygons);
-
-    await Promise.all(image.slice(frames).map(async (slice) => {
-      await slice.save(path.join(PROCESSED_DIR, slice.id));
-    }));
-  }).map((promise: Promise<any>) => {
-    return promise.then(() => {
-      console.log(`${done++}/${labels.length}`);
-    });
-  }));
+  for (let i = 0; i < labels.length; i += BATCH_SIZE) {
+    console.log('%d/%d', i, labels.length);
+    await runBatch(labels.slice(i, i + BATCH_SIZE).filter((l: any) => l));
+  }
 }
 
 run().then(() => {
