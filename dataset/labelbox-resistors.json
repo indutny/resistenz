@@ -1,0 +1,308 @@
+{
+  "classifications": [
+    {
+      "name": "Digit1",
+      "type": "radio",
+      "instructions": "Select the color of the First band",
+      "required": true,
+      "options": [
+        {
+          "value": "black",
+          "label": "black"
+        },
+        {
+          "value": "brown",
+          "label": "brown"
+        },
+        {
+          "value": "red",
+          "label": "red"
+        },
+        {
+          "value": "orange",
+          "label": "orange"
+        },
+        {
+          "value": "yellow",
+          "label": "yellow"
+        },
+        {
+          "value": "green",
+          "label": "green"
+        },
+        {
+          "value": "blue",
+          "label": "blue"
+        },
+        {
+          "value": "violet",
+          "label": "violet"
+        },
+        {
+          "value": "grey",
+          "label": "grey"
+        },
+        {
+          "value": "white",
+          "label": "white"
+        }
+      ]
+    },
+    {
+      "name": "Digit2",
+      "type": "radio",
+      "instructions": "Select the color of the Second band",
+      "required": true,
+      "options": [
+        {
+          "value": "black",
+          "label": "black"
+        },
+        {
+          "value": "brown",
+          "label": "brown"
+        },
+        {
+          "value": "red",
+          "label": "red"
+        },
+        {
+          "value": "orange",
+          "label": "orange"
+        },
+        {
+          "value": "yellow",
+          "label": "yellow"
+        },
+        {
+          "value": "green",
+          "label": "green"
+        },
+        {
+          "value": "blue",
+          "label": "blue"
+        },
+        {
+          "value": "violet",
+          "label": "violet"
+        },
+        {
+          "value": "grey",
+          "label": "grey"
+        },
+        {
+          "value": "white",
+          "label": "white"
+        }
+      ]
+    },
+    {
+      "name": "Digit3",
+      "type": "radio",
+      "required": true,
+      "instructions": "Select the color of the Third band",
+      "options": [
+        {
+          "value": "black",
+          "label": "black"
+        },
+        {
+          "value": "brown",
+          "label": "brown"
+        },
+        {
+          "value": "red",
+          "label": "red"
+        },
+        {
+          "value": "orange",
+          "label": "orange"
+        },
+        {
+          "value": "yellow",
+          "label": "yellow"
+        },
+        {
+          "value": "green",
+          "label": "green"
+        },
+        {
+          "value": "blue",
+          "label": "blue"
+        },
+        {
+          "value": "violet",
+          "label": "violet"
+        },
+        {
+          "value": "grey",
+          "label": "grey"
+        },
+        {
+          "value": "white",
+          "label": "white"
+        }
+      ]
+    },
+    {
+      "name": "Digit4",
+      "type": "radio",
+      "required": true,
+      "instructions": "Select the color of the Fourth (optional) band",
+      "options": [
+        {
+          "value": "black",
+          "label": "black"
+        },
+        {
+          "value": "brown",
+          "label": "brown"
+        },
+        {
+          "value": "red",
+          "label": "red"
+        },
+        {
+          "value": "orange",
+          "label": "orange"
+        },
+        {
+          "value": "yellow",
+          "label": "yellow"
+        },
+        {
+          "value": "green",
+          "label": "green"
+        },
+        {
+          "value": "blue",
+          "label": "blue"
+        },
+        {
+          "value": "violet",
+          "label": "violet"
+        },
+        {
+          "value": "grey",
+          "label": "grey"
+        },
+        {
+          "value": "white",
+          "label": "white"
+        },
+        {
+          "value": "none",
+          "label": "none"
+        }
+      ]
+    },
+    {
+      "name": "Tolerance",
+      "type": "radio",
+      "required": true,
+      "instructions": "Select the color of the Last (tolerance) band",
+      "options": [
+        {
+          "value": "black",
+          "label": "black"
+        },
+        {
+          "value": "brown",
+          "label": "brown"
+        },
+        {
+          "value": "red",
+          "label": "red"
+        },
+        {
+          "value": "orange",
+          "label": "orange"
+        },
+        {
+          "value": "yellow",
+          "label": "yellow"
+        },
+        {
+          "value": "green",
+          "label": "green"
+        },
+        {
+          "value": "blue",
+          "label": "blue"
+        },
+        {
+          "value": "violet",
+          "label": "violet"
+        },
+        {
+          "value": "grey",
+          "label": "grey"
+        },
+        {
+          "value": "white",
+          "label": "white"
+        },
+        {
+          "value": "gold",
+          "label": "gold"
+        },
+        {
+          "value": "silver",
+          "label": "silver"
+        },
+        {
+          "value": "none",
+          "label": "none"
+        }
+      ]
+    },
+    {
+      "name": "PPM Band",
+      "type": "radio",
+      "required": true,
+      "instructions": "Select the color of the Extra (PPM) band",
+      "options": [
+        {
+          "value": "black",
+          "label": "black"
+        },
+        {
+          "value": "brown",
+          "label": "brown"
+        },
+        {
+          "value": "red",
+          "label": "red"
+        },
+        {
+          "value": "orange",
+          "label": "orange"
+        },
+        {
+          "value": "yellow",
+          "label": "yellow"
+        },
+        {
+          "value": "green",
+          "label": "green"
+        },
+        {
+          "value": "blue",
+          "label": "blue"
+        },
+        {
+          "value": "violet",
+          "label": "violet"
+        },
+        {
+          "value": "grey",
+          "label": "grey"
+        },
+        {
+          "value": "none",
+          "label": "none"
+        }
+      ]
+    }
+  ]
+}

@@ -4,8 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 
-const DATASET_DIR = path.join(__dirname, '..', 'dataset');
-const RAW_DIR = path.join(DATASET_DIR, 'raw');
+const RAW_DIR = process.argv[2];
+const RELATIVE = path.relative('.', RAW_DIR);
 
 const header = 'External ID,URL';
 
@@ -13,8 +13,8 @@ const data = fs.readdirSync(RAW_DIR).filter((file) => {
   return /\.jpg$/.test(file);
 }).map((file) => {
   const id = file.replace(/\.jpg$/, '');
-  return `${id},https://raw.githubusercontent.com/indutny/resistenz/` + 
-    `master/dataset/raw/${file}`;
+  return `${id},https://raw.githubusercontent.com/indutny/resistenz/` +
+    `master/${RELATIVE}/${file}`;
 }).join('\n');
 
 console.log(header + '\n' + data + '\n');
