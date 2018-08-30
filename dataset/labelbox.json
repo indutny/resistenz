@@ -1,0 +1,284 @@
+{
+  "tools": [
+    {
+      "name": "Resistor",
+      "color": "green",
+      "tool": "polygon",
+      "classifications": [
+        {
+          "name": "Digit1",
+          "type": "radio",
+          "required": true,
+          "options": [
+            {
+              "value": "black",
+              "label": "black"
+            },
+            {
+              "value": "brown",
+              "label": "brown"
+            },
+            {
+              "value": "red",
+              "label": "red"
+            },
+            {
+              "value": "orange",
+              "label": "orange"
+            },
+            {
+              "value": "yellow",
+              "label": "yellow"
+            },
+            {
+              "value": "green",
+              "label": "green"
+            },
+            {
+              "value": "blue",
+              "label": "blue"
+            },
+            {
+              "value": "violet",
+              "label": "violet"
+            },
+            {
+              "value": "grey",
+              "label": "grey"
+            },
+            {
+              "value": "white",
+              "label": "white"
+            }
+          ]
+        },
+        {
+          "name": "Digit2",
+          "type": "radio",
+          "required": true,
+          "options": [
+            {
+              "value": "black",
+              "label": "black"
+            },
+            {
+              "value": "brown",
+              "label": "brown"
+            },
+            {
+              "value": "red",
+              "label": "red"
+            },
+            {
+              "value": "orange",
+              "label": "orange"
+            },
+            {
+              "value": "yellow",
+              "label": "yellow"
+            },
+            {
+              "value": "green",
+              "label": "green"
+            },
+            {
+              "value": "blue",
+              "label": "blue"
+            },
+            {
+              "value": "violet",
+              "label": "violet"
+            },
+            {
+              "value": "grey",
+              "label": "grey"
+            },
+            {
+              "value": "white",
+              "label": "white"
+            }
+          ]
+        },
+        {
+          "name": "Digit3",
+          "type": "radio",
+          "required": true,
+          "options": [
+            {
+              "value": "black",
+              "label": "black"
+            },
+            {
+              "value": "brown",
+              "label": "brown"
+            },
+            {
+              "value": "red",
+              "label": "red"
+            },
+            {
+              "value": "orange",
+              "label": "orange"
+            },
+            {
+              "value": "yellow",
+              "label": "yellow"
+            },
+            {
+              "value": "green",
+              "label": "green"
+            },
+            {
+              "value": "blue",
+              "label": "blue"
+            },
+            {
+              "value": "violet",
+              "label": "violet"
+            },
+            {
+              "value": "grey",
+              "label": "grey"
+            },
+            {
+              "value": "white",
+              "label": "white"
+            }
+          ]
+        },
+        {
+          "name": "Digit4",
+          "type": "radio",
+          "required": false,
+          "options": [
+            {
+              "value": "black",
+              "label": "black"
+            },
+            {
+              "value": "brown",
+              "label": "brown"
+            },
+            {
+              "value": "red",
+              "label": "red"
+            },
+            {
+              "value": "orange",
+              "label": "orange"
+            },
+            {
+              "value": "yellow",
+              "label": "yellow"
+            },
+            {
+              "value": "green",
+              "label": "green"
+            },
+            {
+              "value": "blue",
+              "label": "blue"
+            },
+            {
+              "value": "violet",
+              "label": "violet"
+            },
+            {
+              "value": "grey",
+              "label": "grey"
+            },
+            {
+              "value": "white",
+              "label": "white"
+            }
+          ]
+        },
+        {
+          "name": "Tolerance",
+          "type": "radio",
+          "required": false,
+          "options": [
+            {
+              "value": "black",
+              "label": "black"
+            },
+            {
+              "value": "brown",
+              "label": "brown"
+            },
+            {
+              "value": "red",
+              "label": "red"
+            },
+            {
+              "value": "orange",
+              "label": "orange"
+            },
+            {
+              "value": "yellow",
+              "label": "yellow"
+            },
+            {
+              "value": "green",
+              "label": "green"
+            },
+            {
+              "value": "blue",
+              "label": "blue"
+            },
+            {
+              "value": "violet",
+              "label": "violet"
+            },
+            {
+              "value": "grey",
+              "label": "grey"
+            },
+            {
+              "value": "white",
+              "label": "white"
+            },
+            {
+              "value": "gold",
+              "label": "gold"
+            },
+            {
+              "value": "silver",
+              "label": "silver"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Suggested Frame",
+      "color": "blue",
+      "tool": "rectangle"
+    }
+  ],
+  "classifications": [
+    {
+      "name": "image_problems",
+      "instructions": "Select all that apply",
+      "type": "checklist",
+      "options": [
+        {
+          "value": "blur",
+          "label": "Blurry"
+        },
+        {
+          "value": "saturated",
+          "label": "Over Saturated"
+        },
+        {
+          "value": "pixelated",
+          "label": "Pixelated"
+        },
+        {
+          "value": "collusion",
+          "label": "Collusion"
+        }
+      ]
+    }
+  ]
+}
