@@ -17,6 +17,8 @@ PRIOR_SIZES = [
 
 class Model:
   def __init__(self, config, prior_sizes=PRIOR_SIZES):
+    self.config = config
+
     self.prior_sizes = tf.constant(prior_sizes, dtype=tf.float32,
         name='prior_sizes')
     self.iou_threshold = config.iou_threshold
@@ -47,17 +49,22 @@ class Model:
       x = self.max_pool(x, size=2, stride=2, name='5')
       x = self.conv_bn(x, filters=512, size=3, name='6', training=training)
       x = self.max_pool(x, size=2, stride=1, name='6')
-      x = self.conv_bn(x, filters=1024, size=3, name='pre_final',
-          training=training)
 
       # TODO(indutny): residual routes
+      if not self.config.minimal:
+        x = self.conv_bn(x, filters=1024, size=3, name='pre_final',
+                         training=training)
 
       ####
 
-      x = self.conv_bn(x, filters=256, size=1, name='final_1',
-          training=training)
-      x = self.conv_bn(x, filters=512, size=3, name='final_2',
-          training=training)
+      if not self.config.minimal:
+        x = self.conv_bn(x, filters=256, size=1, name='final_1',
+                         training=training)
+        x = self.conv_bn(x, filters=512, size=3, name='final_2',
+                         training=training)
+      else:
+        x = self.conv_bn(x, filters=128, size=3, name='final_2',
+                         training=training)
       x = self.conv_bn(x, filters=self.grid_depth * GRID_CHANNELS, size=1,
           name='last', activation=None, training=training)
 

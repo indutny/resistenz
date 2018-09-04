@@ -31,6 +31,7 @@ def parse_args(kind='train'):
   parser.add_argument('--lr_fast_epoch', type=int, default=100)
   parser.add_argument('--lr_slow', type=float, default=0.001)
   parser.add_argument('--lr_slow_epoch', type=int, default=5000)
+  parser.add_argument('--minimal', type=bool, default=False)
 
   parser.add_argument('--save_every', type=int, default=100)
 
