@@ -5,4 +5,5 @@ import { Server } from '../src/classify';
 const server = new Server();
 
 server.listen(8000, () => {
+  console.error(server.address());
 });

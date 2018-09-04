@@ -1,7 +1,9 @@
+import * as path from 'path';
 import * as http from 'http';
 import * as fs from 'fs';
+import { promisify } from 'util';
+
 import { run as microRun, json, send } from 'micro';
-import * as path from 'path';
 import * as debugAPI from 'debug';
 import * as serveStatic from 'serve-static';
 import * as Joi from 'joi';
@@ -33,7 +35,7 @@ export class Server extends http.Server {
   private readonly images = this.dataset.filter((f) => /\.jpg$/.test(f));
   private readonly hashes = new Set(this.images.map((f) => f.slice(0, -4)));
   private readonly completed: Set<string>;
-  private readonly labelQueue: string[];
+  private readonly incomplete: Set<string>;
   private readonly publicHandler = serveStatic(PUBLIC_DIR);
 
   private readonly labelSchema = Joi.object().keys({
@@ -59,9 +61,9 @@ export class Server extends http.Server {
       return /\.json$/.test(f);
     }).map((f) => f.slice(0, -5)).filter((hash) => this.hashes.has(hash)));
 
-    this.labelQueue = Array.from(this.hashes).filter((hash) => {
+    this.incomplete = new Set(Array.from(this.hashes).filter((hash) => {
       return !this.completed.has(hash);
-    });
+    }));
 
     this.on('request', (req, res) => {
       this.publicHandler(req, res, () => {
@@ -94,19 +96,22 @@ export class Server extends http.Server {
 
   private async handleStats(req: Req, res: Res) {
     return {
-      completed: this.hashes.size - this.labelQueue.length,
+      completed: this.hashes.size - this.incomplete.size,
       total: this.hashes.size,
     };
   }
 
   private async handleNext(req: Req, res: Res) {
-    if (this.labelQueue.length === 0) {
+    if (this.incomplete.size === 0) {
       return { done: true, image: null };
     }
 
+    const hashes = Array.from(this.incomplete);
+    const index = (Math.random() * hashes.length) | 0;
+
     return {
       done: false,
-      hash: this.labelQueue[0],
+      hash: hashes[index],
     };
   }
 
@@ -117,7 +122,25 @@ export class Server extends http.Server {
       return send(res, 400, { error: error.message });
     }
 
-    console.log(value);
+    const hash: string = (value as any).hash;
+    const colors: ReadonlyArray<string> = (value as any).colors;
+
+    if (!this.incomplete.has(hash)) {
+      return send(res, 400, { error: 'Invalid hash' });
+    }
+
+    this.incomplete.delete(hash);
+    const label = JSON.stringify({ colors });
+
+    try {
+      await promisify(fs.writeFile)(
+          path.join(IMAGES_DIR, hash + '.json'),
+          label);
+    } catch (e) {
+      this.incomplete.add(hash);
+      return send(res, 500, { error: e.stack });
+    }
+
     return { ok: true };
   }
 
@@ -128,7 +151,9 @@ export class Server extends http.Server {
       return send(res, 400, { error: error.message });
     }
 
-    console.log(value);
+    const hash: string = (value as any).hash;
+    this.incomplete.delete(hash);
+
     return { ok: true };
   }
 }
