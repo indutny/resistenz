@@ -10,22 +10,25 @@
   "author": "Fedor Indutny <fedor@indutny.com> (http://darksi.de/)",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow/tfjs": "^0.12.4",
-    "@tensorflow/tfjs-node": "^0.1.11",
+    "@types/micro": "^7.3.1",
+    "debug": "^3.1.0",
     "exif-parser": "^0.1.12",
     "image-size": "^0.6.3",
-    "jimp": "^0.3.5",
+    "jimp": "^0.3.11",
+    "joi": "^13.6.0",
+    "micro": "^9.3.3",
     "node-fetch": "^2.2.0",
     "node-kmeans": "^1.1.8",
-    "typescript": "^3.0.1"
+    "serve-static": "^1.13.2",
+    "typescript": "^3.0.3"
   },
   "devDependencies": {
+    "@types/debug": "0.0.30",
     "@types/image-size": "0.0.29",
-    "@types/node": "^10.5.7",
+    "@types/joi": "^13.4.4",
+    "@types/node": "^10.9.4",
     "@types/node-fetch": "^2.1.2",
-    "ts-node": "^7.0.0"
-  },
-  "optionalDependencies": {
-    "@tensorflow/tfjs-node-gpu": "^0.1.13"
+    "@types/serve-static": "^1.13.2",
+    "ts-node": "^7.0.1"
   }
 }
