@@ -39,7 +39,6 @@ export class Server extends http.Server {
   private readonly publicHandler = serveStatic(PUBLIC_DIR);
 
   private readonly labelSchema = Joi.object().keys({
-    hash: Joi.string().max(128).required(),
     colors: Joi.array().ordered(
       Joi.valid(DIGIT).required(),
       Joi.valid(DIGIT).required(),
@@ -48,10 +47,6 @@ export class Server extends http.Server {
       Joi.valid(TOLERANCE).required(),
       Joi.valid(TEMPERATURE.concat('none')).required(),
     ).max(6).required(),
-  });
-
-  private readonly skipSchema = Joi.object().keys({
-    hash: Joi.string().max(128).required(),
   });
 
   constructor() {
@@ -82,21 +77,31 @@ export class Server extends http.Server {
         return this.handleNext(req, res);
       }
     } else if (req.method === 'PUT') {
-      if (req.url === '/api/label') {
-        return this.handleUpdateLabel(req, res);
+      const label = this.parseLabelURL(req.url!);
+      if (label) {
+        return this.handleUpdateLabel(req, res, label);
       }
     } else if (req.method === 'DELETE') {
-      if (req.url === '/api/label') {
-        return this.handleSkipLabel(req, res);
+      const label = this.parseLabelURL(req.url!);
+      if (label) {
+        return this.handleSkipLabel(req, res, label);
       }
     }
 
     return send(res, 404, { error: 'Not found' });
   }
 
+  private parseLabelURL(url: string): string | undefined {
+    const match = url.match(/^\/api\/label\/([a-z0-9_])+$/);
+    if (!match) {
+      return undefined;
+    }
+    return match[1];
+  }
+
   private async handleStats(req: Req, res: Res) {
     return {
-      completed: this.hashes.size - this.incomplete.size,
+      completed: this.completed.size,
       total: this.hashes.size,
     };
   }
@@ -115,14 +120,13 @@ export class Server extends http.Server {
     };
   }
 
-  private async handleUpdateLabel(req: Req, res: Res) {
+  private async handleUpdateLabel(req: Req, res: Res, hash: string) {
     const raw = await json(req);
     const { error, value } = this.labelSchema.validate(raw);
     if (error) {
       return send(res, 400, { error: error.message });
     }
 
-    const hash: string = (value as any).hash;
     const colors: ReadonlyArray<string> = (value as any).colors;
 
     if (!this.incomplete.has(hash)) {
@@ -141,19 +145,14 @@ export class Server extends http.Server {
       return send(res, 500, { error: e.stack });
     }
 
+    this.completed.add(hash);
+
     return { ok: true };
   }
 
-  private async handleSkipLabel(req: Req, res: Res) {
-    const raw = await json(req);
-    const { error, value } = this.skipSchema.validate(raw);
-    if (error) {
-      return send(res, 400, { error: error.message });
-    }
-
-    const hash: string = (value as any).hash;
+  private async handleSkipLabel(req: Req, res: Res, hash: string) {
     this.incomplete.delete(hash);
-
+    this.completed.add(hash);
     return { ok: true };
   }
 }

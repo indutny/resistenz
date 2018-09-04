@@ -7,3 +7,4 @@ saves/*
 !saves/.gitkeep
 __pycache__/
 logs/
+lib/
