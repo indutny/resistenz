@@ -4,9 +4,10 @@ import * as path from 'path';
 import { promisify } from 'util';
 import imageSize = require('image-size');
 
-import { IMAGE_DIR } from '../src/dataset';
 import { Polygon, polygonToRect } from '../src/utils';
-import { GRID_DEPTH } from '../src/model';
+
+const IMAGE_DIR = path.join(__dirname, '..', 'processed');
+const GRID_DEPTH = 5;
 
 const kmeans = require('node-kmeans');
 
