@@ -1,3 +1,4 @@
+import * as assert from 'assert';
 import * as path from 'path';
 import * as http from 'http';
 import * as fs from 'fs';
@@ -15,6 +16,11 @@ const debug = debugAPI('resistenz:classify:cli');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public', 'classify');
 const IMAGES_DIR = path.join(PUBLIC_DIR, 'images');
+
+const COLOR = [
+  'black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet',
+  'grey', 'white', 'gold', 'silver',
+];
 
 const DIGIT = [
   'black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet',
@@ -39,14 +45,8 @@ export class Server extends http.Server {
   private readonly publicHandler = serveStatic(PUBLIC_DIR);
 
   private readonly labelSchema = Joi.object().keys({
-    colors: Joi.array().ordered(
-      Joi.valid(DIGIT).required(),
-      Joi.valid(DIGIT).required(),
-      Joi.valid(DIGIT.concat('none')).required(),
-      Joi.valid(DIGIT.concat('none')).required(),
-      Joi.valid(TOLERANCE).required(),
-      Joi.valid(TEMPERATURE.concat('none')).required(),
-    ).max(6).required(),
+    colors: Joi.array().items(Joi.string().valid(COLOR))
+      .min(3).max(6).required(),
   });
 
   constructor() {
@@ -92,11 +92,25 @@ export class Server extends http.Server {
   }
 
   private parseLabelURL(url: string): string | undefined {
-    const match = url.match(/^\/api\/label\/([a-z0-9_])+$/);
+    const match = url.match(/^\/api\/label\/([a-z0-9_]+)$/);
     if (!match) {
       return undefined;
     }
     return match[1];
+  }
+
+  private transformColors(colors: ReadonlyArray<string>)
+      : ReadonlyArray<string> {
+    if (colors.length === 3) {
+      return colors.concat('none', 'none', 'none');
+    } else if (colors.length === 4) {
+      return [ colors[0], colors[1], colors[2], 'none', colors[3], 'none' ];
+    } else if (colors.length === 5) {
+      return colors.concat('none');
+    } else {
+      assert.strictEqual(colors.length, 6);
+      return colors;
+    }
   }
 
   private async handleStats(req: Req, res: Res) {
@@ -113,6 +127,7 @@ export class Server extends http.Server {
 
     const hashes = Array.from(this.incomplete);
     const index = (Math.random() * hashes.length) | 0;
+    console.log('next', hashes[index]);
 
     return {
       done: false,
@@ -127,8 +142,10 @@ export class Server extends http.Server {
       return send(res, 400, { error: error.message });
     }
 
-    const colors: ReadonlyArray<string> = (value as any).colors;
+    const colors: ReadonlyArray<string> = this.transformColors(
+      (value as any).colors);
 
+    console.log('update', hash);
     if (!this.incomplete.has(hash)) {
       return send(res, 400, { error: 'Invalid hash' });
     }
