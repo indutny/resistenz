@@ -20,7 +20,6 @@ const KEY_TO_COLOR_MAP = new Map([
   [ 'w', 'white' ],
   [ 'z', 'gold' ],
   [ 'x', 'silver' ],
-  [ ' ', 'none' ],
 ]);
 
 class App {
