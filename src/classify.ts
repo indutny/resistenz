@@ -108,7 +108,7 @@ export class Server extends http.Server {
 
   private async handleNext(req: Req, res: Res) {
     if (this.incomplete.size === 0) {
-      return { done: true, image: null };
+      return { done: true, hash: null };
     }
 
     const hashes = Array.from(this.incomplete);

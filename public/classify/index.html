@@ -2,8 +2,63 @@
 <html>
   <head>
     <meta charset="utf-8"/>
+
+    <style>
+      .colorbar span {
+        border: 1px solid #333;
+        color: white;
+        padding: 4px 6px;
+      }
+
+      .colorbar .black {
+        background: linear-gradient(rgba(0,0,0,1),rgba(0,0,0,0.8));
+      }
+      .colorbar .brown {
+        background: linear-gradient(rgba(128,74,21,1),rgba(128,74,21,0.8));
+      }
+      .colorbar .red {
+        background: linear-gradient(rgba(156,0,0,1),rgba(156,0,0,0.8));
+      }
+      .colorbar .orange {
+        background: linear-gradient(rgba(188,115,0,1),rgba(188,115,0,0.8));
+      }
+      .colorbar .yellow {
+        background: linear-gradient(rgba(221,195,23,1),rgba(221,195,23,0.8));
+      }
+      .colorbar .green {
+        background: linear-gradient(rgba(71,137,0,1),rgba(71,137,0,0.8));
+      }
+      .colorbar .blue {
+        background: linear-gradient(rgba(0,69,182,1),rgba(0,69,182,0.8));
+      }
+      .colorbar .violet {
+        background: linear-gradient(rgba(133,0,138,1),rgba(133,0,138,0.8));
+      }
+      .colorbar .grey {
+        background: linear-gradient(rgba(149,149,149,1),rgba(149,149,149,0.8));
+        color: black;
+      }
+      .colorbar .white {
+        background: linear-gradient(rgba(255,255,255,1),rgba(255,255,255,0.8));
+        color: black;
+      }
+      .colorbar .gold {
+        background: linear-gradient(rgba(195,160,21,1),rgba(195,160,21,0.8));
+      }
+      .colorbar .silver {
+        background: linear-gradient(rgba(195,195,195,1),rgba(195,195,195,0.8));
+        color: black;
+      }
+      .colorbar .none {
+        color: red;
+      }
+    </style>
+
+    <title>rEsistenZ</title>
   </head>
   <body>
+    <section id=content></section>
+
     <script src="/js/bundle.js"></script>
   </body>
 </html>
