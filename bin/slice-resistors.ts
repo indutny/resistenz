@@ -18,20 +18,25 @@ async function sliceRect(image: jimp, rect: IOrientedRect, id: string,
                          subId: number) {
   const radius = Math.max(rect.width, rect.height) / 2;
 
-  image = image.crop(rect.cx - radius, rect.cy - radius, 2 * radius,
+  image.crop(rect.cx - radius, rect.cy - radius, 2 * radius,
     2 * radius);
-  image = image.rotate(rect.angle * 180 / Math.PI, false);
+  image.rotate(rect.angle * 180 / Math.PI, false);
 
-  image = image.crop(radius - rect.width / 2, radius - rect.height / 2,
-                     rect.width, rect.height);
+  image.crop(radius - rect.width / 2, radius - rect.height / 2,
+             rect.width, rect.height);
+  image.normalize();
 
   await image.writeAsync(path.join(RESISTORS_DIR, id + '_' + subId + '.jpg'));
 }
 
 async function runSingle(label: any) {
   const id = label['External ID'];
-  const regions = label['Label']['Resistor'];
-  const geometry = (regions || []).map((elem: any) => elem.geometry);
+  const rawResistors = label['Label']['Resistor'] || [];
+  const rawFrames = label['Label']['Suggested Frame'] || [];
+  const resistors =
+      rawResistors.map((elem: any) => elem.geometry) as ReadonlyArray<Polygon>;
+  let frames =
+      rawFrames.map((elem: any) => elem.geometry) as ReadonlyArray<Polygon>;
 
   const imageFile = path.join(RAW_DIR, id + '.jpg');
   if (!await promisify(fs.exists)(imageFile)) {
@@ -52,10 +57,22 @@ async function runSingle(label: any) {
     return { x: point.x, y: height - point.y };
   }
 
-  const rects: ReadonlyArray<IOrientedRect> = geometry.map((poly: Polygon) => {
-    return polygonToRect(poly.map((point: IPoint) => {
-      return translate(point);
-    }));
+  frames = frames.map((frame) => frame.map((point) => translate(point)));
+
+  const rects: ReadonlyArray<IOrientedRect> = resistors.map((poly) => {
+    return polygonToRect(poly.map((point) => translate(point)));
+  }).filter((rect: IOrientedRect) => {
+    // Leave only those resistors that lie in frames
+    for (const frame of frames) {
+      const tl = frame[0];
+      const br = frame[2];
+
+      if (tl.x <= rect.cx && tl.y <= rect.cy &&
+          rect.cx <= br.x && rect.cy <= br.y) {
+        return true;
+      }
+    }
+    return false;
   });
 
   // Slice up

@@ -31,6 +31,8 @@ const TOLERANCE = [
   'brown', 'red', 'green', 'blue', 'violet', 'grey', 'gold', 'silver', 'none',
 ];
 
+const MULTIPLY = TOLERANCE;
+
 const TEMPERATURE = [
   'black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet',
   'grey',
@@ -99,18 +101,35 @@ export class Server extends http.Server {
     return match[1];
   }
 
-  private transformColors(colors: ReadonlyArray<string>)
-      : ReadonlyArray<string> {
+  private transformColors(colors: ReadonlyArray<string>) {
+    let res: ReadonlyArray<string>;
     if (colors.length === 3) {
-      return colors.concat('none', 'none', 'none');
+      res = colors.concat('none', 'none', 'none');
     } else if (colors.length === 4) {
-      return [ colors[0], colors[1], colors[2], 'none', colors[3], 'none' ];
+      res = [ colors[0], colors[1], colors[2], 'none', colors[3], 'none' ];
     } else if (colors.length === 5) {
-      return colors.concat('none');
+      res = colors.concat('none');
     } else {
       assert.strictEqual(colors.length, 6);
-      return colors;
+      res = colors;
     }
+
+    let error: string | undefined;
+    if (!DIGIT.includes(res[0])) {
+      error = 'invalid first band';
+    } else if (!DIGIT.includes(res[1])) {
+      error = 'invalid second band';
+    } else if (!DIGIT.includes(res[2])) {
+      error = 'invalid third band';
+    } else if (res[3] !== 'none' && !MULTIPLY.includes(res[3])) {
+      error = 'invalid multiply band';
+    } else if (res[4] !== 'none' && !TOLERANCE.includes(res[4])) {
+      error = 'invalid tolerance band';
+    } else if (res[5] !== 'none' && !TEMPERATURE.includes(res[5])) {
+      error = 'invalid temperature band';
+    }
+
+    return [ res, error ];
   }
 
   private async handleStats(req: Req, res: Res) {
@@ -127,7 +146,6 @@ export class Server extends http.Server {
 
     const hashes = Array.from(this.incomplete);
     const index = (Math.random() * hashes.length) | 0;
-    console.log('next', hashes[index]);
 
     return {
       done: false,
@@ -142,10 +160,11 @@ export class Server extends http.Server {
       return send(res, 400, { error: error.message });
     }
 
-    const colors: ReadonlyArray<string> = this.transformColors(
-      (value as any).colors);
+    const [ colors, colorError ] = this.transformColors((value as any).colors);
+    if (colorError) {
+      return send(res, 400, { error: colorError });
+    }
 
-    console.log('update', hash);
     if (!this.incomplete.has(hash)) {
       return send(res, 400, { error: 'Invalid hash' });
     }

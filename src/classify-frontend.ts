@@ -26,6 +26,7 @@ class App {
   private image: HTMLImageElement | undefined;
   private colorBar: HTMLElement;
   private stats: HTMLElement;
+  private error: HTMLElement;
   private keyHandler: ((key: string) => boolean) | undefined;
 
   constructor(private readonly container: HTMLElement) {
@@ -50,6 +51,13 @@ class App {
     this.container.appendChild(colorBar);
     this.colorBar = colorBar;
 
+    // Error
+    const error = document.createElement('section');
+    error.className = 'error';
+
+    this.container.appendChild(error);
+    this.error = error;
+
     // Legend
     this.container.appendChild(this.generateLegend());
   }
@@ -59,13 +67,25 @@ class App {
       const stats = await this.fetchStats();
 
       this.stats.textContent = JSON.stringify(stats);
+      this.error.textContent = '';
+      let colors: ReadonlyArray<string> | undefined;
 
-      const result = await this.prompt(image);
+      for (;;) {
+        const result = await this.prompt(image, colors);
 
-      if (result === false) {
-        await this.skip(image);
-      } else {
-        await this.submit(image, result);
+        if (result === false) {
+          await this.skip(image);
+        } else {
+          try {
+            await this.submit(image, result);
+          } catch (e) {
+            // Repeat
+            this.error.textContent = e.message;
+            colors = result;
+            continue;
+          }
+        }
+        break;
       }
     }
   }
@@ -99,7 +119,8 @@ class App {
     return res;
   }
 
-  private async prompt(hash: string): Promise<PromptResult> {
+  private async prompt(hash: string, previous?: ReadonlyArray<string>)
+      : Promise<PromptResult> {
     const image = await this.loadImage(hash);
 
     if (this.image) {
@@ -131,6 +152,12 @@ class App {
       }
       colors.pop();
     };
+
+    if (previous) {
+      for (const color of previous) {
+        addColor(color);
+      }
+    }
 
     return new Promise<PromptResult>((resolve) => {
       this.keyHandler = (key: string) => {
@@ -197,13 +224,19 @@ class App {
   }
 
   private async submit(hash: string, colors: ReadonlyArray<string>) {
-    await fetch(`/api/label/${hash}`, {
+    const res = await fetch(`/api/label/${hash}`, {
       method: 'PUT',
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({ colors }),
     });
+
+    const json = await res.json();
+
+    if (json.error) {
+      throw new Error(json.error);
+    }
   }
 }
 
