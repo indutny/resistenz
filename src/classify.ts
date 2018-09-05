@@ -28,10 +28,13 @@ const DIGIT = [
 ];
 
 const TOLERANCE = [
-  'brown', 'red', 'green', 'blue', 'violet', 'grey', 'gold', 'silver', 'none',
+  'brown', 'red', 'green', 'blue', 'violet', 'grey', 'gold', 'silver',
 ];
 
-const MULTIPLY = TOLERANCE;
+const MULTIPLY = [
+  'black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet',
+  'gold', 'silver',
+];
 
 const TEMPERATURE = [
   'black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet',
