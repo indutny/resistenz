@@ -32,6 +32,7 @@ class ViewController: UIViewController,
 
   private var session: AVCaptureSession!
   private var activeRects: [SKNode] = []
+  private var device: AVCaptureDevice?
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -40,6 +41,13 @@ class ViewController: UIViewController,
       print("No device!")
       return
     }
+
+    self.device = device
+
+    if device.isFocusModeSupported(.continuousAutoFocus) {
+      device.focusMode = .continuousAutoFocus
+    }
+
     guard let input = try? AVCaptureDeviceInput(device: device) else {
       print("No input!")
       return
@@ -76,6 +84,16 @@ class ViewController: UIViewController,
   override func didReceiveMemoryWarning() {
     super.didReceiveMemoryWarning()
     // Dispose of any resources that can be recreated.
+  }
+
+  @IBAction func tapHappened(_ sender: Any) {
+    guard let device = self.device else {
+      return
+    }
+    if device.focusMode == .locked && device.isFocusModeSupported(.autoFocus) {
+      device.focusMode = .autoFocus
+      print("refocus")
+    }
   }
 
   // MARK: AVKit methods

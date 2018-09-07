@@ -33,6 +33,7 @@ class Dataset:
         list(set([ f.split('_', 1)[0] for f in self.images ])))
 
     self.polygons = []
+    self.colors = []
     max_polys = 0
     for image_file in self.images:
       json_file = image_file[:-4] + '.json'
@@ -40,13 +41,18 @@ class Dataset:
         raw_labels = json.load(f)
 
       image_polys = []
-      for poly in raw_labels['polygons']:
-        if len(poly) != 4:
+      image_colors = []
+      for resistor in raw_labels['resistors']:
+        poly = resistor['polygon']
+        colors = resistor['colors']
+        if len(poly) != 4 or len(colors) != 6:
           continue
         poly_points = [ [ float(p['x']), float(p['y']) ] for p in poly ]
         image_polys.append(poly_points)
+        image_colors.append(image_colors)
 
       self.polygons.append(image_polys)
+      self.colors.append(image_colors)
       max_polys = max(max_polys, len(image_polys))
 
     # Pad polygons
@@ -54,48 +60,60 @@ class Dataset:
       while (len(image_polys) < max_polys):
         image_polys.append(4 * [ [ -1000.0, -1000.0 ] ])
 
+    for image_colors in self.colors:
+      while (len(image_colors) < max_polys):
+        image_colors.append([ \
+          'brown', 'brown', 'brown', 'none', 'brown', 'none' ])
+
     # Just to have stable shape for empty validation data
     self.polygons = np.array(self.polygons)
+    self.colors = np.array(self.colors)
 
   def load(self):
     validation_count = int(len(self.base_hashes) * self.validation_split)
     validation_hashes = set(self.base_hashes[:validation_count])
 
     validation_images = []
-    validation_polygons = []
+    validation_indices = []
     training_images = []
     training_polygons = []
     for i, image in enumerate(self.images):
       if image.split('_', 1)[0] in validation_hashes:
         validation_images.append(image)
-        validation_polygons.append(i)
+        validation_indices.append(i)
       else:
         training_images.append(image)
-        training_polygons.append(i)
+        training_indices.append(i)
 
     print('Training dataset has {} images'.format(len(training_images)))
     print('Validation dataset has {} images'.format(len(validation_images)))
 
     # Do this trick to preserve shape
-    training_polygons = self.polygons[training_polygons]
-    validation_polygons = self.polygons[validation_polygons]
+    training_polygons = self.polygons[training_indices]
+    training_colors = self.colors[training_indices]
+    validation_polygons = self.polygons[validation_indices]
+    validation_colors = self.colors[validation_indices]
 
-    validation = self.load_single(validation_images, validation_polygons)
-    training = self.load_single(training_images, training_polygons)
+    validation = self.load_single(validation_images, validation_polygons, \
+        validation_colors)
+    training = self.load_single(training_images, training_polygons, \
+        training_colors)
 
-    training = training.map( \
-        lambda img, polys: self.process_image(img, polys, True))
-    validation = validation.map( \
-        lambda img, polys: self.process_image(img, polys, False))
+    training = training.map(lambda img, polys, colors: \
+        self.process_image(img, polys, colors, True))
+    validation = validation.map(lambda img, polys, colors: \
+        self.process_image(img, polys, colors, False))
 
     return training, validation
 
-  def load_single(self, images, polygons):
+  def load_single(self, images, polygons, colors):
     dataset =  tf.data.Dataset.from_tensor_slices( \
         (tf.constant(images, dtype=tf.string), \
-         tf.constant(polygons, dtype=tf.float32),))
+         tf.constant(polygons, dtype=tf.float32), \
+         tf.constant(colors, dtype=tf.int32),))
 
-    dataset = dataset.map(lambda img, polys: (self.load_image(img), polys,))
+    dataset = dataset.map(lambda img, polys, colors: \
+        (self.load_image(img), polys, colors,))
     dataset.cache()
     return dataset.shuffle(buffer_size=10000)
 
@@ -104,7 +122,7 @@ class Dataset:
     image = tf.image.decode_jpeg(image, channels=3)
     return image
 
-  def process_image(self, image, polygons, training):
+  def process_image(self, image, polygons, colors, training):
     #
     # Do a major crop to fit image into a square
     #
@@ -181,8 +199,8 @@ class Dataset:
       image = tf.clip_by_value(image, 0.0, 1.0)
 
     image = normalize_image(image)
-
-    return image, self.polygons_to_grid(polygons)
+    polygons, colors = self.filter_polygons(polygons, colors, self.image_size)
+    return image, self.create_grid(polygons, colors)
 
   def random_rotate(self, image, polygons):
     angle = tf.random_uniform([], 0.0, math.pi / 2.0)
@@ -236,16 +254,20 @@ class Dataset:
   def crop_polygons(self, polygons, crop_off, crop_size):
     # NOTE: `crop_off = [ height, width ]`
     polygons -= tf.cast(tf.gather(crop_off, [ 1, 0 ]), dtype=tf.float32)
+    return polygons
+
+  def filter_polygons(self, polygons, colors, image_size):
     polygon_centers = tf.reduce_mean(polygons, axis=1)
 
     # Coordinate-wise mask
     polygon_mask = tf.logical_and(polygon_centers >= 0.0, \
-        polygon_centers <= tf.cast(crop_size, dtype=tf.float32))
+        polygon_centers <= tf.cast(image_size, dtype=tf.float32))
 
     # Polygon-wise mask
     polygon_mask = tf.logical_and(polygon_mask[:, 0], polygon_mask[:, 1])
 
-    return tf.where(polygon_mask, polygons, -tf.ones_like(polygons))
+    return tf.where(polygon_mask, polygons, -tf.ones_like(polygons)), \
+        tf.where(color_mask, colors, tf.zeros_like(colors))
 
   def rot90_polygons(self, image, polygons, rot_count):
     angle = (math.pi / 2.0) * tf.cast(rot_count, dtype=tf.float32)
@@ -270,8 +292,8 @@ class Dataset:
     polygons = tf.reshape(polygons, old_shape)
     return polygons
 
-  def polygons_to_grid(self, polygons):
-    rects = self.polygons_to_rects(polygons)
+  def create_grid(self, polygons, colors):
+    rects = self.polygons_to_rects(polygons, colors)
 
     cell_starts = create_cell_starts(self.grid_size)
 
@@ -311,7 +333,7 @@ class Dataset:
 
     return grid
 
-  def polygons_to_rects(self, polygons):
+  def polygons_to_rects(self, polygons, colors):
     center = tf.reduce_mean(polygons, axis=1)
 
     p0, p1, p2, p3 = \
@@ -354,8 +376,9 @@ class Dataset:
 
     rect_count = center.shape[0]
     confidence = tf.ones([ rect_count, 1 ], dtype=tf.float32)
+    colors = tf.cast(colors, dtype=tf.float32)
 
-    rest = tf.concat([ size, angle, confidence ], axis=-1)
+    rest = tf.concat([ size, angle, confidence, colors ], axis=-1)
 
     return { 'center': center, 'rest': rest }
 

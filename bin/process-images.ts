@@ -13,14 +13,21 @@ const TARGET_HEIGHT = TARGET_WIDTH;
 const DATASET_DIR = path.join(__dirname, '..', 'dataset');
 const LABELS_FILE = path.join(DATASET_DIR, 'labels.json');
 const RAW_DIR = path.join(DATASET_DIR, 'raw');
+const RESISTOR_DIR = path.join(DATASET_DIR, 'resistors');
 const PROCESSED_DIR = path.join(DATASET_DIR, 'processed');
 
 const labels = JSON.parse(fs.readFileSync(LABELS_FILE).toString());
 
+interface IResistor {
+  readonly polygon: Polygon;
+  readonly colors: ReadonlyArray<string> | undefined;
+}
+
 class Image {
-  constructor(public readonly id: string,
-              public readonly raw: jimp,
-              public readonly polygons: ReadonlyArray<Polygon>) {
+  constructor(
+      public readonly id: string,
+      public readonly raw: jimp,
+    public readonly resistors: ReadonlyArray<IResistor>) {
   }
 
   public slice(frames: ReadonlyArray<IRect>): ReadonlyArray<Image> {
@@ -42,15 +49,18 @@ class Image {
         continue;
       }
 
-      let subPolygons = this.polygons.filter((poly) => {
-        const c = polygonCenter(poly);
+      let subResistors = this.resistors.filter((res) => {
+        const c = polygonCenter(res.polygon);
 
-        return c.x >= frame.x && c.x <= (frame.x + frame.width) &&
+        return res.colors &&
+          c.x >= frame.x && c.x <= (frame.x + frame.width) &&
           c.y >= frame.y && c.y <= (frame.y + frame.height);
-      }).map((poly) => {
-        return poly.map((p) => {
+      }).map((res) => {
+        const polygon = res.polygon.map((p) => {
           return { x: p.x - frame.x, y: p.y - frame.y };
         });
+
+        return { polygon, colors: res.colors };
       });
 
       assert.strictEqual(TARGET_WIDTH, TARGET_HEIGHT);
@@ -60,20 +70,24 @@ class Image {
       // Resize to save space
       clone.scale(scale, jimp.RESIZE_NEAREST_NEIGHBOR);
 
-      subPolygons = subPolygons.map((poly) => {
-        return poly.map((p) => {
+      subResistors = subResistors.map((res) => {
+        const polygon = res.polygon.map((p) => {
           return { x: p.x * scale, y: p.y * scale };
         });
+
+        return { polygon, colors: res.colors };
       });
 
-      res.push(new Image(`${this.id}_${i++}`, clone, subPolygons));
+      res.push(new Image(`${this.id}_${i++}`, clone, subResistors));
     }
 
     return res;
   }
 
   public async save(file: string) {
-    const json = JSON.stringify({ polygons: this.polygons });
+    const json = JSON.stringify({
+      resistors: this.resistors,
+    });
 
     return Promise.all([
       this.raw.writeAsync(file + '.jpg'),
@@ -118,14 +132,44 @@ async function run() {
       });
     }
 
-    const polygons: Polygon[] = [];
+    let polygons: Polygon[] = [];
     for (let { geometry } of (data['Label']['Resistor'] || [])) {
       geometry = geometry.map(translate);
 
       polygons.push(geometry);
     }
 
-    const image = new Image(id, rawImage, polygons);
+    polygons = polygons.filter((poly) => {
+      const c = polygonCenter(poly);
+
+      // Leave only those resistors that lie in frames
+      // TODO(indutny): reduce copy-paste between this file and slice-resistors
+      for (const frame of frames) {
+        if (frame.x <= c.x && frame.y <= c.y &&
+            c.x <= (frame.x + frame.width) && c.y <= (frame.y + frame.height)) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    const resistors = await Promise.all(polygons.map(async (polygon, index) => {
+      const colorFile = path.join(RESISTOR_DIR, `${id}_${index}.json`);
+      const exists = await promisify(fs.exists)(colorFile);
+
+      if (!exists) {
+        return { polygon, colors: undefined };
+      }
+
+      const raw = await promisify(fs.readFile)(colorFile);
+      return {
+        polygon,
+        colors: JSON.parse(raw.toString()).colors,
+      };
+    }));
+
+    const image = new Image(id, rawImage, resistors);
 
     await Promise.all(image.slice(frames).map(async (slice) => {
       await slice.save(path.join(PROCESSED_DIR, slice.id));
