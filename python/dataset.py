@@ -4,7 +4,7 @@ import numpy as np
 import os
 import json
 
-from utils import create_cell_starts, normalize_image
+from utils import create_cell_starts, normalize_image, colors_to_int
 
 DIR = os.path.join('.', 'dataset', 'processed')
 
@@ -27,7 +27,7 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
-    self.images = sorted(self.images)
+    self.images = sorted(self.images)[:2]
 
     self.base_hashes = sorted(
         list(set([ f.split('_', 1)[0] for f in self.images ])))
@@ -49,7 +49,7 @@ class Dataset:
           continue
         poly_points = [ [ float(p['x']), float(p['y']) ] for p in poly ]
         image_polys.append(poly_points)
-        image_colors.append(image_colors)
+        image_colors.append(colors_to_int(colors))
 
       self.polygons.append(image_polys)
       self.colors.append(image_colors)
@@ -76,7 +76,7 @@ class Dataset:
     validation_images = []
     validation_indices = []
     training_images = []
-    training_polygons = []
+    training_indices = []
     for i, image in enumerate(self.images):
       if image.split('_', 1)[0] in validation_hashes:
         validation_images.append(image)
@@ -267,7 +267,7 @@ class Dataset:
     polygon_mask = tf.logical_and(polygon_mask[:, 0], polygon_mask[:, 1])
 
     return tf.where(polygon_mask, polygons, -tf.ones_like(polygons)), \
-        tf.where(color_mask, colors, tf.zeros_like(colors))
+        tf.where(polygon_mask, colors, tf.zeros_like(colors))
 
   def rot90_polygons(self, image, polygons, rot_count):
     angle = (math.pi / 2.0) * tf.cast(rot_count, dtype=tf.float32)

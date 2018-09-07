@@ -41,11 +41,16 @@ class ViewController: UIViewController,
       print("No device!")
       return
     }
-
     self.device = device
 
     if device.isFocusModeSupported(.continuousAutoFocus) {
-      device.focusMode = .continuousAutoFocus
+      do {
+        try device.lockForConfiguration()
+        device.focusMode = .continuousAutoFocus
+        device.unlockForConfiguration()
+      } catch {
+        print("Can't use auto-focus")
+      }
     }
 
     guard let input = try? AVCaptureDeviceInput(device: device) else {
@@ -84,16 +89,6 @@ class ViewController: UIViewController,
   override func didReceiveMemoryWarning() {
     super.didReceiveMemoryWarning()
     // Dispose of any resources that can be recreated.
-  }
-
-  @IBAction func tapHappened(_ sender: Any) {
-    guard let device = self.device else {
-      return
-    }
-    if device.focusMode == .locked && device.isFocusModeSupported(.autoFocus) {
-      device.focusMode = .autoFocus
-      print("refocus")
-    }
   }
 
   // MARK: AVKit methods

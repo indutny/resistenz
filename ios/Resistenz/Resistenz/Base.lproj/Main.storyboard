@@ -31,20 +31,12 @@
                             <constraint firstItem="vB0-8k-MAQ" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" id="rLW-rl-ieE"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
-                        <connections>
-                            <outletCollection property="gestureRecognizers" destination="Bjt-4E-Woo" appends="YES" id="K2o-Hj-SDj"/>
-                        </connections>
                     </view>
                     <connections>
                         <outlet property="spriteView" destination="vB0-8k-MAQ" id="4Ci-Fg-vye"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
-                <tapGestureRecognizer id="Bjt-4E-Woo">
-                    <connections>
-                        <action selector="tapHappened:" destination="BYZ-38-t0r" id="xRf-iv-8HF"/>
-                    </connections>
-                </tapGestureRecognizer>
             </objects>
             <point key="canvasLocation" x="32.799999999999997" y="35.532233883058474"/>
         </scene>
