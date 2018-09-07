@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from utils import gen_rot_matrix
+from utils import COLOR_DIMS
 
 IMAGE_SIZE = 416
 # TODO(indutny): there is no reason to not calculate grid_size automatically
@@ -234,25 +234,33 @@ class Model:
           batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth * GRID_CHANNELS,
         ], name='output')
 
-      center, size, angle, confidence = tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
+      center, size, angle, confidence, colors = \
+          tf.split(x, [ 2, 2, 2, 1, GRID_CHANNELS - 7 ], axis=-1)
 
       center = tf.sigmoid(center)
       size = tf.exp(size)
       angle = tf.nn.l2_normalize(angle, axis=-1)
       confidence = tf.sigmoid(confidence)
 
+      # TODO(indutny): softmax colors
+
       # Apply priors
       with tf.name_scope('apply_prior_sizes',
                          values=[ size, self.prior_sizes ]):
         size *= self.prior_sizes
 
-      return tf.concat([ center, size, angle, confidence ], axis=-1,
+      return tf.concat([ center, size, angle, confidence, colors ], axis=-1,
           name='output')
 
   def parse_box(self, input, name):
-    center, size, angle, confidence = tf.split(input, [ 2, 2, 2, 1 ], axis=-1)
+    center, size, angle, confidence, colors = \
+        tf.split(input, [ 2, 2, 2, 1, GRID_CHANNELS - 7 ], axis=-1,
+                 name='{}_box_split'.format(name))
     confidence = tf.squeeze(confidence, axis=-1,
         name='{}_confidence'.format(name))
+
+    colors = tf.split(colors, COLOR_DIMS, axis=-1,
+        name='{}_box_colors'.format(name))
 
     center /= GRID_SIZE
     half_size = size / 2.0
@@ -262,6 +270,7 @@ class Model:
       'size': size,
       'angle': angle,
       'confidence': confidence,
+      'colors': colors,
 
       'top_left': center - half_size,
       'bottom_right': center + half_size,

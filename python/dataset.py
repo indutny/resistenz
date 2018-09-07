@@ -27,7 +27,7 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
-    self.images = sorted(self.images)[:2]
+    self.images = sorted(self.images)[:32]
 
     self.base_hashes = sorted(
         list(set([ f.split('_', 1)[0] for f in self.images ])))
@@ -62,8 +62,7 @@ class Dataset:
 
     for image_colors in self.colors:
       while (len(image_colors) < max_polys):
-        image_colors.append([ \
-          'brown', 'brown', 'brown', 'none', 'brown', 'none' ])
+        image_colors.append(6 * [ 0 ])
 
     # Just to have stable shape for empty validation data
     self.polygons = np.array(self.polygons)

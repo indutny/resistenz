@@ -60,7 +60,7 @@ class SVG:
     grid = grid * tf.constant([
       float(width) / grid_size , float(height) / grid_size,
       float(width), float(height),
-      1, 1, 1 ]);
+      1, 1, 1 ] + [ 0 ] * (grid_channels - 7));
 
     # Make grid linear
     grid = tf.reshape(grid,
@@ -68,10 +68,12 @@ class SVG:
 
     return tf.foldl(lambda acc, cell: \
         acc + self.cell_to_polygon(cell, is_truth=is_truth), grid,
-        initializer=tf.constant('', tf.string))
+            initializer=tf.constant('', tf.string))
 
   def cell_to_polygon(self, cell, is_truth=False):
-    center, size, angle, confidence = tf.split(cell, [ 2, 2, 2, 1 ], axis=-1)
+    grid_channels = int(cell.shape[-1])
+    center, size, angle, confidence, colors = \
+        tf.split(cell, [ 2, 2, 2, 1, grid_channels - 7 ], axis=-1)
     confidence = tf.squeeze(confidence, axis=-1)
 
     flip_vec = tf.constant([ -1.0, 1.0 ])
