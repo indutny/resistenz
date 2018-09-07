@@ -5,7 +5,7 @@ from utils import gen_rot_matrix
 IMAGE_SIZE = 416
 # TODO(indutny): there is no reason to not calculate grid_size automatically
 GRID_SIZE = 13
-GRID_CHANNELS = 7
+GRID_CHANNELS = 67
 
 PRIOR_SIZES = [
   [ 0.14377480392797287, 0.059023397839700086 ],

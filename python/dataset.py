@@ -4,7 +4,7 @@ import numpy as np
 import os
 import json
 
-from utils import create_cell_starts, normalize_image, colors_to_int
+from utils import create_cell_starts, normalize_image, colors_to_int, COLOR_DIMS
 
 DIR = os.path.join('.', 'dataset', 'processed')
 
@@ -376,9 +376,14 @@ class Dataset:
 
     rect_count = center.shape[0]
     confidence = tf.ones([ rect_count, 1 ], dtype=tf.float32)
-    colors = tf.cast(colors, dtype=tf.float32)
 
-    rest = tf.concat([ size, angle, confidence, colors ], axis=-1)
+    rest = [ size, angle, confidence ]
+
+    for i, max_val in enumerate(COLOR_DIMS):
+      color = tf.one_hot(colors[:, i], max_val, dtype=tf.float32)
+      rest.append(color)
+
+    rest = tf.concat(rest, axis=-1)
 
     return { 'center': center, 'rest': rest }
 
