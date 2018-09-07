@@ -56,6 +56,7 @@ TEMPERATURE = [
 COLOR_DIMS = [ \
     len(DIGIT), len(DIGIT), len(DIGIT), len(MULTIPLY), len(TOLERANCE), \
     len(TEMPERATURE) ]
+FLAT_COLOR_DIMS = sum(COLOR_DIMS)
 
 def colors_to_int(colors):
   dig1 = DIGIT.index(colors[0])

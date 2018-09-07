@@ -1,11 +1,11 @@
 import tensorflow as tf
 
-from utils import COLOR_DIMS
+from utils import FLAT_COLOR_DIMS, COLOR_DIMS
 
 IMAGE_SIZE = 416
 # TODO(indutny): there is no reason to not calculate grid_size automatically
 GRID_SIZE = 13
-GRID_CHANNELS = 67
+GRID_CHANNELS = 7
 
 PRIOR_SIZES = [
   [ 0.14377480392797287, 0.059023397839700086 ],
@@ -65,10 +65,11 @@ class Model:
       else:
         x = self.conv_bn(x, filters=128, size=3, name='final_2',
                          training=training)
-      x = self.conv_bn(x, filters=self.grid_depth * GRID_CHANNELS, size=1,
+      x = self.conv_bn(x, filters=self.grid_depth * GRID_CHANNELS + \
+          FLAT_COLOR_DIMS, size=1,
           name='last', activation=None, training=training)
 
-      x = self.output(x, coreml=coreml)
+      x, colors = self.output(x, coreml=coreml)
 
       self.trainable_variables = scope.trainable_variables()
 
@@ -91,6 +92,8 @@ class Model:
     with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
         values=[ prediction, labels ]):
       prediction = self.parse_box(prediction, 'prediction')
+      label_colors, labels = tf.split(labels,
+          [ FLAT_COLOR_DIMS, GRID_CHANNELS ], axis=-1)
       labels = self.parse_box(labels, 'labels')
 
       iou = self.iou(prediction, labels)
@@ -223,19 +226,22 @@ class Model:
   def output(self, x, coreml=False):
     with tf.name_scope('output', values=[ x ]):
       batch_size = tf.shape(x)[0]
+      colors, x = tf.split(x, \
+          [ FLAT_COLOR_DIMS, self.grid_depth * GRID_CHANNELS ], axis=-1)
 
-      if not coreml:
-        x = tf.reshape(x, [
-          batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth, GRID_CHANNELS,
-        ])
-      else:
+      if coreml:
         # CoreML does not support rank-5 tensors, strided slices, and so on
-        return tf.reshape(x, [
+        x = tf.reshape(x, [
           batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth * GRID_CHANNELS,
         ], name='output')
+        return x
 
-      center, size, angle, confidence, colors = \
-          tf.split(x, [ 2, 2, 2, 1, GRID_CHANNELS - 7 ], axis=-1)
+      x = tf.reshape(x, [
+        batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth, GRID_CHANNELS,
+      ])
+
+      center, size, angle, confidence = \
+          tf.split(x, [ 2, 2, 2, 1 ], axis=-1)
 
       center = tf.sigmoid(center)
       size = tf.exp(size)
@@ -249,18 +255,14 @@ class Model:
                          values=[ size, self.prior_sizes ]):
         size *= self.prior_sizes
 
-      return tf.concat([ center, size, angle, confidence, colors ], axis=-1,
-          name='output')
+      x = tf.concat([ center, size, angle, confidence ], axis=-1, name='output')
+      return x, colors
 
   def parse_box(self, input, name):
-    center, size, angle, confidence, colors = \
-        tf.split(input, [ 2, 2, 2, 1, GRID_CHANNELS - 7 ], axis=-1,
-                 name='{}_box_split'.format(name))
+    center, size, angle, confidence = tf.split(input, [ 2, 2, 2, 1 ], \
+        axis=-1, name='{}_box_split'.format(name))
     confidence = tf.squeeze(confidence, axis=-1,
         name='{}_confidence'.format(name))
-
-    colors = tf.split(colors, COLOR_DIMS, axis=-1,
-        name='{}_box_colors'.format(name))
 
     center /= GRID_SIZE
     half_size = size / 2.0
@@ -270,7 +272,6 @@ class Model:
       'size': size,
       'angle': angle,
       'confidence': confidence,
-      'colors': colors,
 
       'top_left': center - half_size,
       'bottom_right': center + half_size,

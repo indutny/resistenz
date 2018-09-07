@@ -27,7 +27,7 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
-    self.images = sorted(self.images)[:32]
+    self.images = sorted(self.images)[23:24]
 
     self.base_hashes = sorted(
         list(set([ f.split('_', 1)[0] for f in self.images ])))
@@ -376,11 +376,12 @@ class Dataset:
     rect_count = center.shape[0]
     confidence = tf.ones([ rect_count, 1 ], dtype=tf.float32)
 
-    rest = [ size, angle, confidence ]
-
+    rest = []
     for i, max_val in enumerate(COLOR_DIMS):
       color = tf.one_hot(colors[:, i], max_val, dtype=tf.float32)
       rest.append(color)
+
+    rest += [ size, angle, confidence ]
 
     rest = tf.concat(rest, axis=-1)
 

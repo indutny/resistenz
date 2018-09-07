@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 
-from utils import create_cell_starts
+from utils import create_cell_starts, FLAT_COLOR_DIMS
 
 class SVG:
   def __init__(self, raw, grid, truth=None):
@@ -41,7 +41,9 @@ class SVG:
 
       svg += self.process_grid(self.grid, cell_starts, width, height)
       if not self.truth is None:
-        svg += self.process_grid(self.truth, cell_starts, width, height,
+        # TODO(indutny): colors!
+        truth = self.truth[:,:,:, FLAT_COLOR_DIMS:]
+        svg += self.process_grid(truth, cell_starts, width, height,
             is_truth=True)
 
       svg += '</svg>\n'
@@ -60,7 +62,7 @@ class SVG:
     grid = grid * tf.constant([
       float(width) / grid_size , float(height) / grid_size,
       float(width), float(height),
-      1, 1, 1 ] + [ 0 ] * (grid_channels - 7));
+      1, 1, 1 ])
 
     # Make grid linear
     grid = tf.reshape(grid,
@@ -71,9 +73,8 @@ class SVG:
             initializer=tf.constant('', tf.string))
 
   def cell_to_polygon(self, cell, is_truth=False):
-    grid_channels = int(cell.shape[-1])
-    center, size, angle, confidence, colors = \
-        tf.split(cell, [ 2, 2, 2, 1, grid_channels - 7 ], axis=-1)
+    center, size, angle, confidence = \
+        tf.split(cell, [ 2, 2, 2, 1 ], axis=-1)
     confidence = tf.squeeze(confidence, axis=-1)
 
     flip_vec = tf.constant([ -1.0, 1.0 ])
