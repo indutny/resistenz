@@ -153,9 +153,11 @@ class Model:
         color_loss += tf.nn.softmax_cross_entropy_with_logits_v2( \
             labels=l_colors,
             logits=p_colors)
+
+      # Mean for each group
+      color_loss /= len(label_colors) + 1e-23
       color_loss *= tf.squeeze(labels['confidence'], axis=-1)
       color_loss = tf.identity(color_loss, name='color_loss')
-      print(color_loss)
 
       # To batch losses
       obj_loss = sum_over_grid(obj_loss)
