@@ -69,13 +69,13 @@ class Model:
           FLAT_COLOR_DIMS, size=1,
           name='last', activation=None, training=training)
 
-      x, raw_colors = self.output(x, coreml=coreml)
+      x, colors, raw_colors = self.output(x, coreml=coreml)
 
       self.trainable_variables = scope.trainable_variables()
 
-      return x, raw_colors
+      return x, colors, raw_colors
 
-  def loss_and_metrics(self, prediction, prediction_colors, labels, \
+  def loss_and_metrics(self, prediction, prediction_raw_colors, labels, \
                        tag='train'):
     # Just a helpers
     def sum_over_cells(x, name=None, max=False):
@@ -91,7 +91,9 @@ class Model:
         return tf.reduce_sum(tf.reduce_sum(x, axis=2), axis=1, name=name)
 
     with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
-        values=[ prediction, prediction_colors, labels ]):
+        values=[ prediction, prediction_raw_colors, labels ]):
+      labels, label_colors = tf.split(labels, \
+          [ GRID_CHANNELS, FLAT_COLOR_DIMS ], axis=-1)
       prediction = self.parse_box(prediction, 'prediction')
       labels = self.parse_box(labels, 'labels')
 
@@ -143,15 +145,29 @@ class Model:
           (center_loss + size_loss + angle_loss)
       coord_loss = sum_over_cells(coord_loss, name='coord_loss')
 
+      # Color loss
+      label_colors = tf.split(label_colors, COLOR_DIMS, axis=-1,
+          name='split_label_colors')
+      color_loss = 0.0
+      for l_colors, p_colors in zip(label_colors, prediction_raw_colors):
+        color_loss += tf.nn.softmax_cross_entropy_with_logits_v2( \
+            labels=l_colors,
+            logits=p_colors)
+      color_loss *= tf.squeeze(labels['confidence'], axis=-1)
+      color_loss = tf.identity(color_loss, name='color_loss')
+      print(color_loss)
+
       # To batch losses
       obj_loss = sum_over_grid(obj_loss)
       no_obj_loss = sum_over_grid(no_obj_loss)
       coord_loss = sum_over_grid(coord_loss)
+      color_loss = sum_over_grid(color_loss)
 
       # To scalars
       obj_loss = tf.reduce_mean(obj_loss)
       no_obj_loss = tf.reduce_mean(no_obj_loss)
       coord_loss = tf.reduce_mean(coord_loss)
+      color_loss = tf.reduce_mean(color_loss)
 
       # Weight decay
       weight_loss = 0.0
@@ -161,7 +177,7 @@ class Model:
       weight_loss *= self.weight_decay
 
       # Total
-      total_loss = obj_loss + no_obj_loss + coord_loss
+      total_loss = obj_loss + no_obj_loss + coord_loss + color_loss
       regularization_loss = weight_loss
 
       # Count objects for metrics below
@@ -200,6 +216,7 @@ class Model:
       tf.summary.scalar('{}/angle_loss'.format(tag), angle_loss),
       tf.summary.scalar('{}/loss'.format(tag), total_loss),
       tf.summary.scalar('{}/weight_loss'.format(tag), weight_loss),
+      tf.summary.scalar('{}/color_loss'.format(tag), color_loss),
     ]
 
     return total_loss + regularization_loss, tf.summary.merge(metrics)
@@ -259,17 +276,15 @@ class Model:
                          values=[ size, self.prior_sizes ]):
         size *= self.prior_sizes
 
-      colors = tf.expand_dims(colors, axis=-2)
-      colors = tf.tile(colors, [ 1, 1, 1, self.grid_depth, 1 ])
-      x = tf.concat([ center, size, angle, confidence, colors ], axis=-1,
+      x = tf.concat([ center, size, angle, confidence ], axis=-1,
           name='output')
 
       # Return raw_colors for use in the loss
-      return x, raw_colors
+      return x, colors, raw_colors
 
   def parse_box(self, input, name):
-    center, size, angle, confidence, colors = tf.split(input, \
-        [ 2, 2, 2, 1, FLAT_COLOR_DIMS ], \
+    center, size, angle, confidence = tf.split(input, \
+        [ 2, 2, 2, 1 ], \
         axis=-1, name='{}_box_split'.format(name))
     confidence = tf.squeeze(confidence, axis=-1,
         name='{}_confidence'.format(name))
@@ -282,8 +297,6 @@ class Model:
       'size': size,
       'angle': angle,
       'confidence': confidence,
-
-      'colors': colors,
 
       'top_left': center - half_size,
       'bottom_right': center + half_size,

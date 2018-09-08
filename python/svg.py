@@ -4,9 +4,10 @@ import tensorflow as tf
 from utils import create_cell_starts, FLAT_COLOR_DIMS
 
 class SVG:
-  def __init__(self, raw_image, grid, truth=None):
+  def __init__(self, raw_image, pred, pred_colors, truth=None):
     self.raw_image = raw_image
-    self.grid = grid
+    self.pred = pred
+    self.pred_colors = pred_colors
     self.truth = truth
 
   def write_file(self, filename):
@@ -32,23 +33,28 @@ class SVG:
           'xlink:href="data:image/png;base64,' + base64 + '"/>\n'
 
       # Compute cell offsets
-      grid_size = int(self.grid.shape[0])
-      grid_channels = int(self.grid.shape[3])
+      grid_size = int(self.pred.shape[0])
+      grid_channels = int(self.pred.shape[3])
 
       cell_starts = create_cell_starts(grid_size) * float(grid_size)
       rest = tf.zeros([ grid_size, grid_size, 1, grid_channels - 2 ])
       cell_starts = tf.concat([ cell_starts, rest ], axis=-1)
 
-      svg += self.process_grid(self.grid, cell_starts, width, height)
+      svg += self.process_grid(self.pred, self.pred_colors, cell_starts, \
+          width, height)
       if not self.truth is None:
-        svg += self.process_grid(self.truth, cell_starts, width, height,
-            is_truth=True)
+        truth_channels = int(self.truth.shape[3])
+        truth, truth_colors = tf.split(self.truth, \
+            [ truth_channels - FLAT_COLOR_DIMS, FLAT_COLOR_DIMS ], axis=-1)
+        svg += self.process_grid(truth, truth_colors, cell_starts, \
+            width, height, is_truth=True)
 
       svg += '</svg>\n'
 
       return tf.write_file(filename, svg)
 
-  def process_grid(self, grid, cell_starts, width, height, is_truth=False):
+  def process_grid(self, grid, colors, cell_starts, width, height, \
+                   is_truth=False):
     grid_size = int(grid.shape[0])
     grid_depth = int(grid.shape[2])
     grid_channels = int(grid.shape[3])
@@ -60,7 +66,7 @@ class SVG:
     grid = grid * tf.constant([
       float(width) / grid_size , float(height) / grid_size,
       float(width), float(height),
-      1, 1, 1 ] + FLAT_COLOR_DIMS * [ 1 ])
+      1, 1, 1 ])
 
     # Make grid linear
     grid = tf.reshape(grid,
@@ -71,8 +77,8 @@ class SVG:
             initializer=tf.constant('', tf.string))
 
   def cell_to_polygon(self, cell, is_truth=False):
-    center, size, angle, confidence, colors = \
-        tf.split(cell, [ 2, 2, 2, 1, FLAT_COLOR_DIMS ], axis=-1)
+    center, size, angle, confidence = \
+        tf.split(cell, [ 2, 2, 2, 1 ], axis=-1)
     confidence = tf.squeeze(confidence, axis=-1)
 
     flip_vec = tf.constant([ -1.0, 1.0 ])
