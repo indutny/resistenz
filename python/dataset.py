@@ -27,7 +27,6 @@ class Dataset:
         for f in os.listdir(DIR)
         if f.endswith('.jpg')
     ]
-    self.images = sorted(self.images)[23:24]
 
     self.base_hashes = sorted(
         list(set([ f.split('_', 1)[0] for f in self.images ])))
