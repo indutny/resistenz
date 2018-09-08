@@ -34,8 +34,9 @@ with tf.Session() as sess:
 
   # Predictions
   # NOTE: yes, this compiles both twice... but perhaps it is faster this way?
-  training_pred = model.forward(training_batch[0], training=True)
-  validation_pred = model.forward(validation_batch[0])
+  training_pred, training_colors = \
+      model.forward(training_batch[0], training=True)
+  validation_pred, validation_colors = model.forward(validation_batch[0])
 
   # Encode first images of each epoch for debugging purposes
   def svg_op(batch, pred, fname):
@@ -58,9 +59,10 @@ with tf.Session() as sess:
 
   # Losses and metrics
   training_loss, training_metrics = \
-      model.loss_and_metrics(training_pred, training_batch[1])
+      model.loss_and_metrics(training_pred, training_colors, training_batch[1])
   validation_loss, validation_metrics = \
-      model.loss_and_metrics(validation_pred, validation_batch[1], 'val')
+      model.loss_and_metrics(validation_pred, validation_colors, \
+                             validation_batch[1], 'val')
 
   # Learing rate schedule
   def lr_schedule(epoch):

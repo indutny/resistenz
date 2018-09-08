@@ -69,13 +69,14 @@ class Model:
           FLAT_COLOR_DIMS, size=1,
           name='last', activation=None, training=training)
 
-      x, colors = self.output(x, coreml=coreml)
+      x, raw_colors = self.output(x, coreml=coreml)
 
       self.trainable_variables = scope.trainable_variables()
 
-      return x
+      return x, raw_colors
 
-  def loss_and_metrics(self, prediction, labels, tag='train'):
+  def loss_and_metrics(self, prediction, prediction_colors, labels, \
+                       tag='train'):
     # Just a helpers
     def sum_over_cells(x, name=None, max=False):
       if max:
@@ -90,10 +91,8 @@ class Model:
         return tf.reduce_sum(tf.reduce_sum(x, axis=2), axis=1, name=name)
 
     with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
-        values=[ prediction, labels ]):
+        values=[ prediction, prediction_colors, labels ]):
       prediction = self.parse_box(prediction, 'prediction')
-      labels, label_colors = tf.split(labels,
-          [ GRID_CHANNELS, FLAT_COLOR_DIMS ], axis=-1)
       labels = self.parse_box(labels, 'labels')
 
       iou = self.iou(prediction, labels)
@@ -226,15 +225,17 @@ class Model:
   def output(self, x, coreml=False):
     with tf.name_scope('output', values=[ x ]):
       batch_size = tf.shape(x)[0]
-      x, colors = tf.split(x, \
-          [ self.grid_depth * GRID_CHANNELS, FLAT_COLOR_DIMS ], axis=-1)
 
       if coreml:
         # CoreML does not support rank-5 tensors, strided slices, and so on
         x = tf.reshape(x, [
-          batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth * GRID_CHANNELS,
+          batch_size, GRID_SIZE, GRID_SIZE,
+          FLAT_COLOR_DIMS + self.grid_depth * GRID_CHANNELS,
         ], name='output')
         return x
+
+      x, colors = tf.split(x, \
+          [ self.grid_depth * GRID_CHANNELS, FLAT_COLOR_DIMS ], axis=-1)
 
       x = tf.reshape(x, [
         batch_size, GRID_SIZE, GRID_SIZE, self.grid_depth, GRID_CHANNELS,
@@ -248,18 +249,27 @@ class Model:
       angle = tf.nn.l2_normalize(angle, axis=-1)
       confidence = tf.sigmoid(confidence)
 
-      # TODO(indutny): softmax colors
+      # Apply softmax over each color group
+      raw_colors = tf.split(colors, COLOR_DIMS, axis=-1)
+      split_colors = [ tf.nn.softmax(l, axis=-1) for l in raw_colors ]
+      colors = tf.concat(split_colors, axis=-1)
 
       # Apply priors
       with tf.name_scope('apply_prior_sizes',
                          values=[ size, self.prior_sizes ]):
         size *= self.prior_sizes
 
-      x = tf.concat([ center, size, angle, confidence ], axis=-1, name='output')
-      return x, colors
+      colors = tf.expand_dims(colors, axis=-2)
+      colors = tf.tile(colors, [ 1, 1, 1, self.grid_depth, 1 ])
+      x = tf.concat([ center, size, angle, confidence, colors ], axis=-1,
+          name='output')
+
+      # Return raw_colors for use in the loss
+      return x, raw_colors
 
   def parse_box(self, input, name):
-    center, size, angle, confidence = tf.split(input, [ 2, 2, 2, 1 ], \
+    center, size, angle, confidence, colors = tf.split(input, \
+        [ 2, 2, 2, 1, FLAT_COLOR_DIMS ], \
         axis=-1, name='{}_box_split'.format(name))
     confidence = tf.squeeze(confidence, axis=-1,
         name='{}_confidence'.format(name))
@@ -272,6 +282,8 @@ class Model:
       'size': size,
       'angle': angle,
       'confidence': confidence,
+
+      'colors': colors,
 
       'top_left': center - half_size,
       'bottom_right': center + half_size,
