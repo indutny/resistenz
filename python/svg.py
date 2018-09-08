@@ -41,8 +41,12 @@ class SVG:
 
       svg += self.process_grid(self.grid, cell_starts, width, height)
       if not self.truth is None:
+        truth_channels = int(self.truth.shape[3])
+
         # TODO(indutny): colors!
-        truth = self.truth[:,:,:, FLAT_COLOR_DIMS:]
+        truth, truth_colors = \
+            tf.split(self.truth,
+                [ truth_channels - FLAT_COLOR_DIMS, FLAT_COLOR_DIMS ], axis=-1)
         svg += self.process_grid(truth, cell_starts, width, height,
             is_truth=True)
 

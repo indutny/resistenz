@@ -376,12 +376,10 @@ class Dataset:
     rect_count = center.shape[0]
     confidence = tf.ones([ rect_count, 1 ], dtype=tf.float32)
 
-    rest = []
+    rest = [ size, angle, confidence ]
     for i, max_val in enumerate(COLOR_DIMS):
       color = tf.one_hot(colors[:, i], max_val, dtype=tf.float32)
       rest.append(color)
-
-    rest += [ size, angle, confidence ]
 
     rest = tf.concat(rest, axis=-1)
 

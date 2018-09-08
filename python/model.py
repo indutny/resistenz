@@ -92,8 +92,8 @@ class Model:
     with tf.variable_scope('resistenz_loss_{}'.format(tag), reuse=False, \
         values=[ prediction, labels ]):
       prediction = self.parse_box(prediction, 'prediction')
-      label_colors, labels = tf.split(labels,
-          [ FLAT_COLOR_DIMS, GRID_CHANNELS ], axis=-1)
+      labels, label_colors = tf.split(labels,
+          [ GRID_CHANNELS, FLAT_COLOR_DIMS ], axis=-1)
       labels = self.parse_box(labels, 'labels')
 
       iou = self.iou(prediction, labels)
@@ -226,8 +226,8 @@ class Model:
   def output(self, x, coreml=False):
     with tf.name_scope('output', values=[ x ]):
       batch_size = tf.shape(x)[0]
-      colors, x = tf.split(x, \
-          [ FLAT_COLOR_DIMS, self.grid_depth * GRID_CHANNELS ], axis=-1)
+      x, colors = tf.split(x, \
+          [ self.grid_depth * GRID_CHANNELS, FLAT_COLOR_DIMS ], axis=-1)
 
       if coreml:
         # CoreML does not support rank-5 tensors, strided slices, and so on
